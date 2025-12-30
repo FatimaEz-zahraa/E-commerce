@@ -1,0 +1,51 @@
+﻿@page
+@model E_commerce.Areas.Admin.Pages.SeedDataModel
+@{
+    ViewData["Title"] = "Générer des données de test";
+}
+
+<div class="container mt-5">
+    <h1>@ViewData["Title"]</h1>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert @(Model.IsSuccess ? "alert-success" : "alert-danger")">
+            @Model.Message
+        </div>
+    }
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Paramètres de génération</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label asp-for="UserCount" class="form-label">Nombre d'utilisateurs</label>
+                    <input asp-for="UserCount" class="form-control" min="1" max="1000" />
+                    <span asp-validation-for="UserCount" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ProductsPerCategory" class="form-label">Produits par catégorie</label>
+                    <input asp-for="ProductsPerCategory" class="form-control" min="1" max="100" />
+                    <span asp-validation-for="ProductsPerCategory" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="MaxReviewsPerProduct" class="form-label">Avis max par produit</label>
+                    <input asp-for="MaxReviewsPerProduct" class="form-control" min="0" max="50" />
+                    <span asp-validation-for="MaxReviewsPerProduct" class="text-danger"></span>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Attention!</strong> Cette action va ajouter des données à la base de données.
+                    Assurez-vous de vouloir continuer.
+                </div>
+
+                <button type="submit" class="btn btn-primary">Générer les données</button>
+                <a asp-page="/Index" class="btn btn-secondary">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>

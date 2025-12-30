@@ -1,0 +1,235 @@
+﻿@model E_commerce.Pages.Products.IndexModel
+
+<div class="card">
+    <div class="card-body">
+        <!-- Bouton effacer tous les filtres -->
+        <div class="mb-4">
+            <a asp-page="./Index" class="btn btn-outline-secondary btn-sm w-100">
+                <i class="fas fa-times me-1"></i>Effacer tous les filtres
+            </a>
+        </div>
+
+        <!-- Filtre par prix -->
+        <div class="filter-section">
+            <h6 class="filter-title">
+                <i class="fas fa-euro-sign me-1"></i> Prix
+            </h6>
+            <form method="get" id="priceFilterForm">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <small>Min: <span id="minPriceValue">@(Model.MinPrice?.ToString("C") ?? "0 €")</span></small>
+                        <small>Max: <span id="maxPriceValue">@(Model.MaxPrice?.ToString("C") ?? "1000 €")</span></small>
+                    </div>
+                    <div class="mb-2">
+                        <input type="range" class="form-range" id="priceMin"
+                               min="0" max="1000" step="10"
+                               value="@(Model.MinPrice ?? 0)"
+                               oninput="updateMinPriceValue(this.value)">
+                    </div>
+                    <div>
+                        <input type="range" class="form-range" id="priceMax"
+                               min="0" max="1000" step="10"
+                               value="@(Model.MaxPrice ?? 1000)"
+                               oninput="updateMaxPriceValue(this.value)">
+                    </div>
+                </div>
+                <input type="hidden" name="minPrice" id="minPriceInput" value="@Model.MinPrice">
+                <input type="hidden" name="maxPrice" id="maxPriceInput" value="@Model.MaxPrice">
+                <input type="hidden" name="category" value="@Model.Category">
+                <input type="hidden" name="brand" value="@Model.Brand">
+                <input type="hidden" name="searchTerm" value="@Model.SearchTerm">
+                <input type="hidden" name="sortBy" value="@Model.SortBy">
+                <button type="submit" class="btn btn-sm btn-warning w-100">
+                    <i class="fas fa-filter me-1"></i>Appliquer les filtres
+                </button>
+            </form>
+        </div>
+
+        <!-- Filtre par disponibilité -->
+        <div class="filter-section">
+            <h6 class="filter-title">
+                <i class="fas fa-box me-1"></i> Disponibilité
+            </h6>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="inStockCheck" checked
+                       onclick="toggleInStockFilter(this.checked)">
+                <label class="form-check-label" for="inStockCheck">
+                    En stock seulement
+                </label>
+            </div>
+        </div>
+
+        <!-- Filtre par catégorie -->
+        @if (Model.Categories?.Any() == true)
+        {
+            <div class="filter-section">
+                <h6 class="filter-title">
+                    <i class="fas fa-tags me-1"></i> Catégories
+                </h6>
+                <div class="list-group list-group-flush">
+                    @foreach (var category in Model.Categories.Take(10))
+                    {
+                        <a asp-page="./Index"
+                           asp-route-category="@category"
+                           asp-route-brand="@Model.Brand"
+                           asp-route-minPrice="@Model.MinPrice"
+                           asp-route-maxPrice="@Model.MaxPrice"
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-sortBy="@Model.SortBy"
+                           class="list-group-item list-group-item-action border-0 px-0 py-2 @(Model.Category == category ? "active fw-bold" : "")">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>@category</span>
+                                <span class="badge bg-secondary rounded-pill">@Model.GetCategoryCount(category)</span>
+                            </div>
+                        </a>
+                    }
+                    @if (Model.Categories.Count > 10)
+                    {
+                        <button class="btn btn-link text-decoration-none p-0 mt-2"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#moreCategories">
+                            <small>Voir plus de catégories</small>
+                        </button>
+                        <div class="collapse mt-2" id="moreCategories">
+                            @foreach (var category in Model.Categories.Skip(10))
+                            {
+                                <a asp-page="./Index"
+                                   asp-route-category="@category"
+                                   asp-route-brand="@Model.Brand"
+                                   asp-route-minPrice="@Model.MinPrice"
+                                   asp-route-maxPrice="@Model.MaxPrice"
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-sortBy="@Model.SortBy"
+                                   class="list-group-item list-group-item-action border-0 px-0 py-2 @(Model.Category == category ? "active fw-bold" : "")">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>@category</span>
+                                        <span class="badge bg-secondary rounded-pill">@Model.GetCategoryCount(category)</span>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Filtre par marque -->
+        @if (Model.Brands?.Any() == true)
+        {
+            <div class="filter-section">
+                <h6 class="filter-title">
+                    <i class="fas fa-industry me-1"></i> Marques
+                </h6>
+                <div class="list-group list-group-flush">
+                    @foreach (var brand in Model.Brands.Take(8))
+                    {
+                        <div class="form-check py-1">
+                            <input class="form-check-input" type="checkbox"
+                                   id="brand-@brand.Replace(" ", "-")"
+                                   @(Model.Brand == brand ? "checked" : "")
+                                   onchange="toggleBrandFilter('@brand', this.checked)">
+                            <label class="form-check-label w-100" for="brand-@brand.Replace(" ", "-")">
+                                <div class="d-flex justify-content-between">
+                                    <span>@brand</span>
+                                    <span class="badge bg-secondary rounded-pill">@Model.GetBrandCount(brand)</span>
+                                </div>
+                            </label>
+                        </div>
+                    }
+                    @if (Model.Brands.Count > 8)
+                    {
+                        <button class="btn btn-link text-decoration-none p-0 mt-1"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#moreBrands">
+                            <small>Voir plus de marques</small>
+                        </button>
+                        <div class="collapse mt-1" id="moreBrands">
+                            @foreach (var brand in Model.Brands.Skip(8))
+                            {
+                                <div class="form-check py-1">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="brand-@brand.Replace(" ", "-")"
+                                           @(Model.Brand == brand ? "checked" : "")
+                                           onchange="toggleBrandFilter('@brand', this.checked)">
+                                    <label class="form-check-label w-100" for="brand-@brand.Replace(" ", "-")">
+                                        <div class="d-flex justify-content-between">
+                                            <span>@brand</span>
+                                            <span class="badge bg-secondary rounded-pill">@Model.GetBrandCount(brand)</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Filtre par évaluation -->
+        <div class="filter-section">
+            <h6 class="filter-title">
+                <i class="fas fa-star me-1"></i> Notes
+            </h6>
+            <div class="list-group list-group-flush">
+                @for (int i = 5; i >= 1; i--)
+                {
+                    <a href="javascript:void(0)"
+                       class="list-group-item list-group-item-action border-0 px-0 py-2"
+                       onclick="filterByRating(@i)">
+                        <div class="rating-stars d-inline-block">
+                            @for (int j = 0; j < 5; j++)
+                            {
+                                <i class="fas fa-star @(j < i ? "text-warning" : "text-muted") fa-sm"></i>
+                            }
+                        </div>
+                        <small class="text-muted ms-2">et plus</small>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateMinPriceValue(value) {
+        document.getElementById('minPriceValue').textContent = value + ' €';
+        document.getElementById('minPriceInput').value = value;
+    }
+
+    function updateMaxPriceValue(value) {
+        document.getElementById('maxPriceValue').textContent = value + ' €';
+        document.getElementById('maxPriceInput').value = value;
+    }
+
+    function toggleBrandFilter(brand, isChecked) {
+        const url = new URL(window.location.href);
+        if (isChecked) {
+            url.searchParams.set('brand', brand);
+        } else {
+            url.searchParams.delete('brand');
+        }
+        url.searchParams.set('pageIndex', '1');
+        window.location.href = url.toString();
+    }
+
+    function filterByRating(rating) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('minRating', rating);
+        url.searchParams.set('pageIndex', '1');
+        window.location.href = url.toString();
+    }
+
+    function toggleInStockFilter(isChecked) {
+        // Cette fonctionnalité nécessiterait une modification du service
+        // Pour l'instant, on redirige vers la même page
+        console.log('Filtre en stock:', isChecked);
+    }
+
+    // Initialiser les valeurs des sliders
+    document.addEventListener('DOMContentLoaded', function() {
+        updateMinPriceValue(document.getElementById('priceMin').value);
+        updateMaxPriceValue(document.getElementById('priceMax').value);
+    });
+</script>

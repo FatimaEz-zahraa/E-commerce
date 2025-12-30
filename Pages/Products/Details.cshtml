@@ -1,0 +1,208 @@
+﻿@page
+@model E_commerce.Pages.Products.DetailsModel
+
+@{
+    ViewData["Title"] = Model.Product?.Name;
+}
+
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Products/Index">Produits</a></li>
+            <li class="breadcrumb-item"><a asp-page="/Products/Index" asp-route-Category="@Model.Product?.Category">@Model.Product?.Category</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Product?.Name</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Galerie d'images -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <img src="@(Model.Product?.ImageUrl ?? "/images/default-product.jpg")"
+                         alt="@Model.Product?.Name"
+                         class="img-fluid rounded"
+                         style="max-height: 500px; object-fit: contain;">
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Product?.ImageUrl))
+                {
+                    <div class="card-footer bg-white border-0">
+                        <div class="row g-2">
+                            <div class="col-3">
+                                <img src="@Model.Product.ImageUrl"
+                                     class="img-thumbnail"
+                                     style="height: 80px; object-fit: cover;">
+                            </div>
+                            <!-- Ajouter d'autres miniatures ici si vous avez plusieurs images -->
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Détails du produit -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <!-- Catégorie et marque -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <span class="badge bg-info">@Model.Product?.Category</span>
+                            <span class="badge bg-secondary">@Model.Product?.Brand</span>
+                        </div>
+                        <!-- Bouton wishlist -->
+                        <button class="btn btn-outline-danger btn-sm">
+                            <i class="far fa-heart"></i>
+                        </button>
+                    </div>
+
+                    <!-- Nom et note -->
+                    <h1 class="h3 mb-2">@Model.Product?.Name</h1>
+
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="text-warning me-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <i class="fas fa-star @(i <= (Model.Product?.Rating ?? 0) ? "fas" : "far")"></i>
+                            }
+                        </div>
+                        <span class="text-muted">(@Model.Product?.ReviewCount avis)</span>
+                    </div>
+
+                    <!-- Prix -->
+                    <div class="mb-4">
+                        <h2 class="text-primary display-6">@Model.Product?.Price.ToString("C", System.Globalization.CultureInfo.CurrentCulture)</h2>
+
+                        @if (Model.Product?.OldPrice > 0)
+                        {
+                            <del class="text-muted">@Model.Product.OldPrice.Value.ToString("C", System.Globalization.CultureInfo.CurrentCulture)</del>
+                        }
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <h5 class="mb-2">Description</h5>
+                        <p class="text-muted">@Model.Product?.Description</p>
+                    </div>
+
+                    <!-- Stock -->
+                    <div class="alert @(Model.Product?.StockQuantity > 0 ? "alert-success" : "alert-danger") mb-4">
+                        <i class="fas @(Model.Product?.StockQuantity > 0 ? "fa-check-circle" : "fa-times-circle") me-2"></i>
+                        @if (Model.Product?.StockQuantity > 0)
+                        {
+                            <span>En stock - @Model.Product.StockQuantity unités disponibles</span>
+                        }
+                        else
+                        {
+                            <span>Rupture de stock</span>
+                        }
+                    </div>
+
+                    <!-- Remplacez le formulaire existant par : -->
+                    <form method="post" asp-page="/Cart/Index" asp-page-handler="AddItem">
+                        <input type="hidden" name="id" value="@Model.Product?.Id" />
+                        <div class="row g-3">
+                            <div class="col-auto">
+                                <label for="quantity" class="form-label">Quantité</label>
+                                <input type="number"
+                                       name="quantity"
+                                       class="form-control"
+                                       style="width: 100px;"
+                                       min="1"
+                                       max="@Model.Product?.StockQuantity"
+                                       value="1">
+                            </div>
+                            <div class="col">
+                                <label class="form-label d-block">&nbsp;</label>
+                                <button type="submit"
+                                        class="btn btn-primary btn-lg w-100 @(Model.Product?.StockQuantity <= 0 ? "disabled" : "")"
+                                        @(Model.Product?.StockQuantity <= 0 ? "disabled" : "")>
+                                    <i class="fas fa-shopping-cart me-2"></i>
+                                    Ajouter au panier
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Acheter maintenant -->
+                    <div class="mb-4">
+                        <button class="btn btn-success btn-lg w-100 @(Model.Product?.StockQuantity <= 0 ? "disabled" : "")">
+                            <i class="fas fa-bolt me-2"></i>
+                            Acheter maintenant
+                        </button>
+                    </div>
+
+                    <!-- Livraison -->
+                    <div class="card border-0 bg-light mb-4">
+                        <div class="card-body">
+                            <div class="d-flex">
+                                <div class="me-3 text-success">
+                                    <i class="fas fa-shipping-fast fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Livraison gratuite</h6>
+                                    <p class="text-muted mb-0">Livraison sous 2-3 jours ouvrés</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Garantie -->
+                    <div class="row text-center">
+                        <div class="col-4 border-end">
+                            <i class="fas fa-shield-alt text-primary fa-2x mb-2"></i>
+                            <h6 class="mb-0">Garantie 2 ans</h6>
+                        </div>
+                        <div class="col-4 border-end">
+                            <i class="fas fa-undo-alt text-primary fa-2x mb-2"></i>
+                            <h6 class="mb-0">Retour gratuit</h6>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-headset text-primary fa-2x mb-2"></i>
+                            <h6 class="mb-0">Support 24/7</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produits similaires -->
+    <div class="mt-5">
+        <h3 class="mb-4">Produits similaires</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            <!-- Ici, vous pouvez ajouter les produits similaires -->
+        </div>
+    </div>
+
+    <!-- Avis -->
+    <div class="mt-5">
+        <h3 class="mb-4">Avis clients</h3>
+        <div class="card">
+            <div class="card-body">
+                <!-- Section d'avis ici -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+    }
+
+    .btn-primary, .btn-success {
+        transition: all 0.3s;
+    }
+
+        .btn-primary:hover, .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+</style>

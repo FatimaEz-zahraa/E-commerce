@@ -1,0 +1,406 @@
+﻿@page
+@model E_commerce.Pages.Products.IndexModel
+
+@{
+    ViewData["Title"] = "Produits";
+}
+
+<!-- Breadcrumb -->
+<div class="container mt-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index">Accueil</a></li>
+            <li class="breadcrumb-item active" aria-current="page">
+                Produits
+                @if (!string.IsNullOrEmpty(Model.Category))
+                {
+                    <span>: @Model.Category</span>
+                }
+            </li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container py-4">
+    <!-- En-tête avec tris -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0">
+                @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                {
+                    <span>Résultats pour "@Model.SearchTerm"</span>
+                }
+                else if (!string.IsNullOrEmpty(Model.Category))
+                {
+                    <span>@Model.Category</span>
+                }
+                else
+                {
+                    <span>Tous les produits</span>
+                }
+                @if (Model.TotalProducts > 0)
+                {
+                    <span class="text-muted fs-6">(@Model.TotalProducts produits)</span>
+                }
+            </h1>
+        </div>
+
+        <div class="col-md-4">
+            <div class="d-flex justify-content-end align-items-center">
+                <span class="me-2">Trier par :</span>
+                <select class="form-select form-select-sm" style="max-width: 200px;" id="sortSelect">
+                    <option value="newest">Nouveautés</option>
+                    <option value="price_asc">Prix : croissant</option>
+                    <option value="price_desc">Prix : décroissant</option>
+                    <option value="rating">Meilleures notes</option>
+                    <option value="popular">Plus populaires</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar des filtres -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="sticky-top" style="top: 20px;">
+                <partial name="_FiltersPartial" model="Model" />
+            </div>
+        </div>
+
+        <!-- Liste des produits -->
+        <div class="col-lg-9">
+            @if (Model.Products.Items.Any())
+            {
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+                    @foreach (var product in Model.Products.Items)
+                    {
+                        <div class="col">
+                            <div class="product-card position-relative">
+                                <!-- Badge promotion -->
+                                @if (product.DiscountPercentage > 0)
+                                {
+                                    <div class="promo-badge">
+                                        -@product.DiscountPercentage%
+                                    </div>
+                                }
+                                else if (product.Price < 100)
+                                {
+                                    <div class="promo-badge">
+                                        PROMO
+                                    </div>
+                                }
+
+                                <!-- Image du produit -->
+                                <div class="text-center mb-3">
+                                    <a href="/Products/Details/@product.Id">
+                                        <img src="@(string.IsNullOrEmpty(product.ImageUrl) ? "https://via.placeholder.com/300x300?text=No+Image" : product.ImageUrl)"
+                                             alt="@product.Name"
+                                             class="product-image img-fluid"
+                                             onerror="this.src='https://via.placeholder.com/300x300?text=Image+Error'">
+                                    </a>
+                                </div>
+
+                                <!-- Catégorie -->
+                                @if (!string.IsNullOrEmpty(product.Category))
+                                {
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="fas fa-tag me-1"></i>@product.Category
+                                    </small>
+                                }
+
+                                <!-- Titre du produit -->
+                                <h6 class="product-title mb-2">
+                                    <a href="/Products/Details/@product.Id" class="text-decoration-none text-dark">
+                                        @product.Name
+                                    </a>
+                                </h6>
+
+                                <!-- Marque -->
+                                @if (!string.IsNullOrEmpty(product.Brand))
+                                {
+                                    <small class="text-muted d-block mb-2">
+                                        Marque : <span class="fw-medium">@product.Brand</span>
+                                    </small>
+                                }
+
+                                <!-- Évaluations -->
+                                <div class="product-rating mb-2">
+                                    @{
+                                        int fullStars = (int)Math.Floor(product.Rating);
+                                        bool hasHalfStar = (product.Rating - fullStars) >= 0.5m;
+                                    }
+                                    @for (int i = 0; i < 5; i++)
+                                    {
+                                        if (i < fullStars)
+                                        {
+                                            <i class="fas fa-star text-warning"></i>
+                                        }
+                                        else if (i == fullStars && hasHalfStar)
+                                        {
+                                            <i class="fas fa-star-half-alt text-warning"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="far fa-star text-warning"></i>
+                                        }
+                                    }
+                                    @if (product.ReviewCount > 0)
+                                    {
+                                        <span class="text-muted ms-1">(@product.ReviewCount)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted ms-1">(Aucun avis)</span>
+                                    }
+                                </div>
+
+                                <!-- Prix -->
+                                <div class="product-price mb-2">
+                                    @product.Price.ToString("C")
+                                    @if (product.OldPrice.HasValue)
+                                    {
+                                        <small class="text-muted text-decoration-line-through ms-2">
+                                            @product.OldPrice.Value.ToString("C")
+                                        </small>
+                                    }
+                                </div>
+
+                                <!-- Stock -->
+                                <div class="mb-3">
+                                    @if (product.StockQuantity > 0)
+                                    {
+                                        if (product.StockQuantity > 10)
+                                        {
+                                            <span class="text-success">
+                                                <i class="fas fa-check-circle me-1"></i>En stock
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Plus que @product.StockQuantity disponible(s)
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger">
+                                            <i class="fas fa-times-circle me-1"></i>Rupture de stock
+                                        </span>
+                                    }
+                                </div>
+
+                                <!-- Livraison Prime -->
+                                <div class="mb-3">
+                                    <span class="prime-badge me-2">
+                                        <i class="fas fa-shipping-fast"></i> PRIME
+                                    </span>
+                                    <small class="text-muted">Livraison gratuite</small>
+                                </div>
+
+                                <!-- Boutons d'action -->
+                                <div class="d-grid gap-2">
+                                    @if (product.StockQuantity > 0)
+                                    {
+                                        <button class="btn btn-warning" onclick="addToCart('@product.Id')">
+                                            <i class="fas fa-cart-plus me-2"></i>Ajouter au panier
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-secondary" disabled>
+                                            <i class="fas fa-ban me-2"></i>Indisponible
+                                        </button>
+                                    }
+                                    <a href="/Products/Details/@product.Id" class="btn btn-outline-primary">
+                                        <i class="fas fa-info-circle me-2"></i>Voir détails
+                                    </a>
+                                </div>
+
+                                <!-- Date d'ajout -->
+                                <small class="text-muted d-block mt-2">
+                                    <i class="far fa-clock me-1"></i>
+                                    Ajouté le @product.CreatedAt.ToString("dd/MM/yyyy")
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination améliorée -->
+                @if (Model.Products.TotalPages > 1)
+                {
+                    <nav aria-label="Pagination" class="mt-5">
+                        <ul class="pagination justify-content-center">
+                            @if (Model.Products.PageIndex > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-route-pageIndex="1"
+                                       asp-route-category="@Model.Category"
+                                       asp-route-brand="@Model.Brand"
+                                       asp-route-minPrice="@Model.MinPrice"
+                                       asp-route-maxPrice="@Model.MaxPrice"
+                                       asp-route-searchTerm="@Model.SearchTerm"
+                                       asp-route-sortBy="@Model.SortBy">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" asp-route-pageIndex="@(Model.Products.PageIndex - 1)"
+                                       asp-route-category="@Model.Category"
+                                       asp-route-brand="@Model.Brand"
+                                       asp-route-minPrice="@Model.MinPrice"
+                                       asp-route-maxPrice="@Model.MaxPrice"
+                                       asp-route-searchTerm="@Model.SearchTerm"
+                                       asp-route-sortBy="@Model.SortBy">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            }
+
+                            @for (int i = 1; i <= Model.Products.TotalPages; i++)
+                            {
+                                if (i == 1 || i == Model.Products.TotalPages ||
+                                (i >= Model.Products.PageIndex - 2 && i <= Model.Products.PageIndex + 2))
+                                {
+                                    <li class="page-item @(i == Model.Products.PageIndex ? "active" : "")">
+                                        <a class="page-link" asp-route-pageIndex="@i"
+                                           asp-route-category="@Model.Category"
+                                           asp-route-brand="@Model.Brand"
+                                           asp-route-minPrice="@Model.MinPrice"
+                                           asp-route-maxPrice="@Model.MaxPrice"
+                                           asp-route-searchTerm="@Model.SearchTerm"
+                                           asp-route-sortBy="@Model.SortBy">
+                                            @i
+                                        </a>
+                                    </li>
+                                }
+                                else if (i == Model.Products.PageIndex - 3 || i == Model.Products.PageIndex + 3)
+                                {
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                }
+                            }
+
+                            @if (Model.Products.PageIndex < Model.Products.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-route-pageIndex="@(Model.Products.PageIndex + 1)"
+                                       asp-route-category="@Model.Category"
+                                       asp-route-brand="@Model.Brand"
+                                       asp-route-minPrice="@Model.MinPrice"
+                                       asp-route-maxPrice="@Model.MaxPrice"
+                                       asp-route-searchTerm="@Model.SearchTerm"
+                                       asp-route-sortBy="@Model.SortBy">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" asp-route-pageIndex="@Model.Products.TotalPages"
+                                       asp-route-category="@Model.Category"
+                                       asp-route-brand="@Model.Brand"
+                                       asp-route-minPrice="@Model.MinPrice"
+                                       asp-route-maxPrice="@Model.MaxPrice"
+                                       asp-route-searchTerm="@Model.SearchTerm"
+                                       asp-route-sortBy="@Model.SortBy">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-search fa-4x text-muted"></i>
+                    </div>
+                    <h3 class="h4 mb-3">Aucun produit trouvé</h3>
+                    <p class="text-muted mb-4">
+                        Essayez de modifier vos critères de recherche ou vos filtres
+                    </p>
+                    <a asp-page="./Index" class="btn btn-primary">
+                        <i class="fas fa-times me-2"></i>Effacer tous les filtres
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar des filtres pour mobile -->
+<div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="filterSidebar">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Filtres</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <partial name="_FiltersPartial" model="Model" />
+    </div>
+</div>
+
+<!-- Bouton flottant pour les filtres sur mobile -->
+<div class="d-lg-none fixed-bottom p-3">
+    <button class="btn btn-warning w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterSidebar">
+        <i class="fas fa-filter me-2"></i>Filtrer les résultats
+    </button>
+</div>
+
+@section Scripts {
+    <script>
+        // Gestion du tri
+        document.getElementById('sortSelect').addEventListener('change', function() {
+            const sortBy = this.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('sortBy', sortBy);
+            url.searchParams.set('pageIndex', '1');
+            window.location.href = url.toString();
+        });
+
+        // Définir la valeur sélectionnée du tri
+        const currentSort = '@Model.SortBy';
+        if (currentSort) {
+            document.getElementById('sortSelect').value = currentSort;
+        }
+
+        // Fonction d'ajout au panier
+        function addToCart(productId) {
+            console.log('Ajout au panier du produit:', productId);
+
+            // Simuler un appel API pour l'instant
+            setTimeout(() => {
+                updateCartCount(1); // Incrémenter de 1
+                showNotification('Produit ajouté au panier !');
+            }, 300);
+        }
+
+        function updateCartCount(increment = 1) {
+            const cartCountElement = $('.cart-count');
+            let currentCount = parseInt(cartCountElement.text()) || 0;
+            cartCountElement.text(currentCount + increment);
+        }
+
+        function showNotification(message, isError = false) {
+            const notification = $('<div class="notification"></div>')
+                .text(message)
+                .css({
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    background: isError ? '#cc0c39' : 'var(--amazon-orange)',
+                    color: 'white',
+                    padding: '15px',
+                    borderRadius: '4px',
+                    zIndex: 9999,
+                    animation: 'fadeIn 0.3s ease-in'
+                });
+
+            $('body').append(notification);
+            setTimeout(() => notification.fadeOut(300, () => notification.remove()), 3000);
+        }
+    </script>
+}
