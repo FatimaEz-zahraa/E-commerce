@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using E_commerce.Helpers
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="utf-8" />
@@ -11,27 +12,27 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 
-    <!-- Google Fonts pour une typographie similaire à Amazon -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Amazon+Ember:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Styles personnalisés -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <style>
         :root {
-            --primary-color: #6c5ce7; /* violet doux */
-            --secondary-color: #ff7675; /* corail doux pour badges/alertes */
-            --accent-color: #fdcb6e; /* jaune pastel vif pour boutons et accents */
-            --bg-light: #f5f5f5; /* gris très clair pour fond principal */
-            --text-dark: #2d3436; /* texte principal */
-            --text-muted: #636e72; /* texte secondaire */
-            --card-bg: #ffffff; /* fond cartes produit */
-            --card-border: #e0e0e0; /* bordures cartes et navbar */
+            --primary-color: #6c5ce7;
+            --secondary-color: #ff7675;
+            --accent-color: #fdcb6e;
+            --bg-light: #f5f5f5;
+            --text-dark: #2d3436;
+            --text-muted: #636e72;
+            --card-bg: #ffffff;
+            --card-border: #e0e0e0;
             --hover-shadow: rgba(0,0,0,0.08);
         }
 
         body {
             font-family: 'Amazon Ember', Arial, sans-serif;
-            background-color: var(--light-color);
+            background-color: var(--bg-light);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -40,7 +41,7 @@
 
         /* Header */
         .amazon-header {
-            background-color: #ffffff; /* navbar blanche pour le logo */
+            background-color: #ffffff;
             border-bottom: 1px solid var(--card-border);
         }
 
@@ -73,7 +74,7 @@
         /* Cart badge */
         .cart-badge {
             background-color: var(--secondary-color);
-            color: var(--text-dark);
+            color: #fff;
             border-radius: 50%;
             padding: 0.25rem 0.5rem;
             font-size: 0.75rem;
@@ -165,28 +166,6 @@
             display: inline-block;
         }
 
-        /* Filters */
-        .filter-section {
-            border-bottom: 1px solid var(--card-border);
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
-
-        .filter-title {
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-dark);
-        }
-
-        /* Breadcrumb */
-        .breadcrumb {
-            background-color: var(--light-color);
-            padding: 8px 15px;
-            border-radius: 4px;
-            font-size: 14px;
-            border: 1px solid var(--card-border);
-        }
-
         /* Notification */
         .notification {
             position: fixed;
@@ -195,18 +174,20 @@
             padding: 15px 20px;
             border-radius: 8px;
             z-index: 9999;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-weight: 600;
+            font-size: 16px;
+            min-width: 250px;
             color: #fff;
-            font-weight: 500;
+            animation: slideInRight 0.3s ease-out;
         }
 
         .notification-success {
-            background-color: #55efc4;
-            color: var(--text-dark);
+            background-color: #28a745;
         }
 
         .notification-error {
-            background-color: #ff7675;
+            background-color: #e74c3c;
         }
 
         .notification-info {
@@ -215,139 +196,80 @@
 
         /* Animations */
         @@keyframes slideInRight {
-            from
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
 
-        {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         @@keyframes fadeIn {
-            from
+            from {
+                opacity: 0;
+            }
 
-        {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
+            to {
+                opacity: 1;
+            }
         }
 
         @@keyframes pulse {
-            0%
+            0% {
+                transform: scale(1);
+            }
 
-        {
-            transform: scale(1);
-        }
+            50% {
+                transform: scale(1.1);
+            }
 
-        50% {
-            transform: scale(1.05);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-
+            100% {
+                transform: scale(1);
+            }
         }
 
         .pulse {
             animation: pulse 0.3s ease-in-out;
         }
 
-        /* Dropdown */
-        .dropdown-menu {
-            border-radius: 8px;
-            border: 1px solid var(--card-border);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
         }
 
-        /* Responsive */
-        @@media (max-width: 768px) {
-            .amazon-search
-
-        {
-            margin-top: 10px;
-        }
-
-        .product-image {
-            height: 150px;
-        }
-
-        .cart-badge {
-            font-size: 0.65rem;
-            padding: 0.15rem 0.35rem;
-            min-width: 1rem;
-            height: 1rem;
-        }
-
-        }
-
+        /* Logo */
         .navbar-brand img {
-            height: 80px; /* augmente la taille */
+            height: 80px;
             width: auto;
-            margin-left: 0; /* rapproche vers la gauche */
-            transition: all 0.3s;
         }
 
         @@media (max-width: 768px) {
-            .navbar-brand img
+            .navbar-brand img {
+                height: 60px;
+            }
 
-        {
-            height: 60px; /* ajuste pour mobile */
+            .amazon-search {
+                margin-top: 10px;
+            }
+
+            .product-image {
+                height: 150px;
+            }
+
+            .cart-badge {
+                font-size: 0.65rem;
+                padding: 0.15rem 0.35rem;
+                min-width: 1rem;
+                height: 1rem;
+            }
         }
-
-        }
-
-        /* Notification générale */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 9999;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2); /* ombre pour contraste */
-            font-weight: 600;
-            font-size: 16px;
-            min-width: 250px;
-            color: #fff; /* texte blanc par défaut */
-        }
-
-        /* Succès */
-        .notification-success {
-            background-color: #28a745; /* vert vif visible sur blanc */
-        }
-
-        /* Erreur */
-        .notification-error {
-            background-color: #e74c3c; /* rouge vif */
-        }
-
-        /* Info / général */
-        .notification-info {
-            background-color: #6c5ce7; /* violet primaire */
-        }
-
-
 
         main {
             flex: 1;
         }
     </style>
-
 </head>
 <body>
     <!-- Header principal -->
@@ -357,10 +279,7 @@
                 <!-- Logo -->
                 <div class="col-md-2">
                     <a class="navbar-brand" asp-page="/Products/Index">
-                        <a class="navbar-brand" asp-page="/Products/Index">
-                            <img src="~/images/logo.png" alt="E-Shop Logo" />
-                        </a>
-
+                        <img src="~/images/logo.png" alt="E-Shop Logo" />
                     </a>
                 </div>
 
@@ -423,7 +342,17 @@
                         <!-- Panier -->
                         <a class="nav-link position-relative" asp-page="/Cart/Index">
                             <i class="fas fa-shopping-cart fa-lg"></i>
-                            <span class="cart-badge" id="cartBadge" style="display: none;">0</span>
+                            @{
+                                var cartCount = CookieHelper.GetCartItemCount(Context);
+                            }
+                            @if (cartCount > 0)
+                            {
+                                <span class="cart-badge" id="cartBadge">@cartCount</span>
+                            }
+                            else
+                            {
+                                <span class="cart-badge" id="cartBadge" style="display: none;">0</span>
+                            }
                         </a>
                     </div>
                 </div>
@@ -482,38 +411,38 @@
                 <div class="col-md-3">
                     <h5>Découvrir</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-white-50">À propos de nous</a></li>
-                        <li><a href="#" class="text-white-50">Carrières</a></li>
-                        <li><a href="#" class="text-white-50">Presse</a></li>
+                        <li><a href="#" class="text-muted">À propos de nous</a></li>
+                        <li><a href="#" class="text-muted">Carrières</a></li>
+                        <li><a href="#" class="text-muted">Presse</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
                     <h5>Mon compte</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-white-50">Mes commandes</a></li>
-                        <li><a href="#" class="text-white-50">Ma liste</a></li>
-                        <li><a href="#" class="text-white-50">Mes recommandations</a></li>
+                        <li><a href="#" class="text-muted">Mes commandes</a></li>
+                        <li><a href="#" class="text-muted">Ma liste</a></li>
+                        <li><a href="#" class="text-muted">Mes recommandations</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
                     <h5>Aide</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-white-50">Service Client</a></li>
-                        <li><a href="#" class="text-white-50">Guide d'achat</a></li>
-                        <li><a href="#" class="text-white-50">Contactez-nous</a></li>
+                        <li><a href="#" class="text-muted">Service Client</a></li>
+                        <li><a href="#" class="text-muted">Guide d'achat</a></li>
+                        <li><a href="#" class="text-muted">Contactez-nous</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
                     <h5>Paiement</h5>
                     <ul class="list-unstyled">
-                        <li><i class="fab fa-cc-visa fa-2x me-2"></i></li>
-                        <li><i class="fab fa-cc-mastercard fa-2x me-2"></i></li>
-                        <li><i class="fab fa-cc-paypal fa-2x"></i></li>
+                        <li><i class="fab fa-cc-visa fa-2x me-2 text-muted"></i></li>
+                        <li><i class="fab fa-cc-mastercard fa-2x me-2 text-muted"></i></li>
+                        <li><i class="fab fa-cc-paypal fa-2x text-muted"></i></li>
                     </ul>
                 </div>
             </div>
             <div class="text-center mt-4">
-                <p class="text-white-50">&copy; 2024 E-Shop. Tous droits réservés.</p>
+                <p class="text-muted">&copy; 2024 E-Shop. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
@@ -524,72 +453,44 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
-        // Fonction pour mettre à jour le compteur du panier
+        // Fonction pour mettre à jour le compteur du panier depuis les cookies
         function updateCartBadge() {
-            fetch('/Cart/Index?handler=CartCount')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.count !== undefined) {
-                        const badge = document.getElementById('cartBadge');
-                        if (badge) {
-                            badge.textContent = data.count;
-                            badge.style.display = data.count > 0 ? 'flex' : 'none';
+            try {
+                // Lire directement le cookie sans appel API
+                const cookieValue = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('ECOM_CART='))
+                    ?.split('=')[1];
 
-                            // Animation lorsque le nombre change
-                            if (badge.textContent !== badge.dataset.lastCount) {
-                                badge.classList.add('pulse');
-                                setTimeout(() => badge.classList.remove('pulse'), 300);
-                            }
-                            badge.dataset.lastCount = badge.textContent;
+                if (cookieValue) {
+                    const decoded = decodeURIComponent(cookieValue);
+                    const cartData = JSON.parse(decoded);
+                    const count = cartData?.Items?.reduce((sum, item) => sum + (item.Quantity || 0), 0) || 0;
+
+                    const badge = document.getElementById('cartBadge');
+                    if (badge) {
+                        const currentCount = parseInt(badge.textContent) || 0;
+                        badge.textContent = count;
+
+                        if (count > 0) {
+                            badge.style.display = 'flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+
+                        // Animation si le nombre a changé
+                        if (count !== currentCount && count > 0) {
+                            badge.classList.add('pulse');
+                            setTimeout(() => badge.classList.remove('pulse'), 300);
                         }
                     }
-                })
-                .catch(error => {
-                    console.error('Erreur lors de la mise à jour du panier:', error);
-                });
+                }
+            } catch (error) {
+                console.error('Erreur lecture cookie panier:', error);
+            }
         }
 
-        // Fonction d'ajout au panier pour les boutons "Ajouter au panier"
-        function addToCart(productId, productName) {
-            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-
-            fetch('/Cart/Index?handler=AddItem', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': token || ''
-                },
-                body: JSON.stringify({
-                    productId: productId,
-                    quantity: 1
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    updateCartBadge();
-                    showNotification(`${productName} ajouté au panier !`, 'success');
-                } else {
-                    showNotification(data.message || 'Erreur lors de l\'ajout au panier', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Erreur de connexion', 'error');
-            });
-        }
-
-        // Fonction pour afficher les notifications
+        // Fonction pour afficher une notification
         function showNotification(message, type = 'info') {
             // Supprimer les notifications existantes
             document.querySelectorAll('.notification').forEach(n => n.remove());
@@ -598,14 +499,15 @@
             const notification = document.createElement('div');
             notification.className = `notification notification-${type}`;
             notification.innerHTML = `
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} me-2"></i>
+                <i class="fas ${type === 'success' ? 'fa-check-circle' :
+                                type === 'error' ? 'fa-exclamation-circle' :
+                                'fa-info-circle'} me-2"></i>
                 ${message}
             `;
 
             document.body.appendChild(notification);
-            showNotification(`${productName} ajouté au panier !`, 'success');
 
-            // Supprimer automatiquement après 3 secondes
+            // Supprimer après 3 secondes
             setTimeout(() => {
                 notification.style.opacity = '0';
                 notification.style.transform = 'translateX(100%)';
@@ -614,14 +516,46 @@
             }, 3000);
         }
 
-        // Mettre à jour le badge du panier au chargement de la page
+        // Fonction pour ajouter au panier (utilisée dans Products/Index)
+        function addToCart(productId, productName) {
+            // Redirige vers la page du produit pour l'ajout
+            window.location.href = `/Products/Details/${productId}?handler=AddToCart&quantity=1`;
+        }
+
+        // Observer les changements de cookies
+        function setupCookieObserver() {
+            let lastCookie = document.cookie;
+
+            setInterval(() => {
+                if (document.cookie !== lastCookie) {
+                    lastCookie = document.cookie;
+                    updateCartBadge();
+                }
+            }, 1000); // Vérifie toutes les secondes
+        }
+
+        // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             updateCartBadge();
+            setupCookieObserver();
 
-            // Mettre à jour toutes les 30 secondes pour synchronisation
-            setInterval(updateCartBadge, 30000);
+            // Gestion du scroll pour "Back to top"
+            const backToTop = document.querySelector('.back-to-top');
+            if (backToTop) {
+                backToTop.style.transition = 'opacity 0.3s, visibility 0.3s';
 
-            // Initialiser le sélecteur de catégorie avec la valeur actuelle
+                window.addEventListener('scroll', function() {
+                    if (window.scrollY > 300) {
+                        backToTop.style.opacity = '1';
+                        backToTop.style.visibility = 'visible';
+                    } else {
+                        backToTop.style.opacity = '0';
+                        backToTop.style.visibility = 'hidden';
+                    }
+                });
+            }
+
+            // Pré-remplir le sélecteur de catégorie
             const urlParams = new URLSearchParams(window.location.search);
             const currentCategory = urlParams.get('category');
             if (currentCategory) {
@@ -631,14 +565,14 @@
                 }
             }
 
-            // Ajouter la classe fade-in au contenu principal
+            // Animation d'entrée
             const mainContent = document.querySelector('main .container');
             if (mainContent) {
                 mainContent.classList.add('fade-in');
             }
         });
 
-        // Fonction pour gérer la recherche avancée
+        // Fonction pour gérer la recherche
         function handleSearch(event) {
             event.preventDefault();
             const form = event.target;
@@ -663,30 +597,6 @@
             const searchForm = document.querySelector('form[asp-page="/Products/Index"]');
             if (searchForm) {
                 searchForm.addEventListener('submit', handleSearch);
-            }
-        });
-
-        // Gestion du scroll pour le bouton "Back to top"
-        window.addEventListener('scroll', function() {
-            const backToTop = document.querySelector('.back-to-top');
-            if (backToTop) {
-                if (window.scrollY > 300) {
-                    backToTop.style.opacity = '1';
-                    backToTop.style.visibility = 'visible';
-                } else {
-                    backToTop.style.opacity = '0';
-                    backToTop.style.visibility = 'hidden';
-                }
-            }
-        });
-
-        // Initialiser le bouton "Back to top"
-        document.addEventListener('DOMContentLoaded', function() {
-            const backToTop = document.querySelector('.back-to-top');
-            if (backToTop) {
-                backToTop.style.opacity = '0';
-                backToTop.style.visibility = 'hidden';
-                backToTop.style.transition = 'opacity 0.3s, visibility 0.3s';
             }
         });
     </script>

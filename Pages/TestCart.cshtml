@@ -1,0 +1,91 @@
+﻿<!-- test-cart.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Panier Direct</title>
+</head>
+<body>
+    <h1>Test Direct du Panier</h1>
+
+    <button onclick="testDirectAdd()">Test Ajout Direct</button>
+    <button onclick="testViewCart()">Voir Panier</button>
+    <button onclick="testCheckCookies()">Vérifier Cookies</button>
+
+    <div id="result"></div>
+
+    <script>
+        function log(message) {
+            const result = document.getElementById('result');
+            result.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+
+        async function testDirectAdd() {
+            try {
+                log("=== Test Ajout Direct ===");
+
+                // Utiliser l'ID du produit de test affiché dans les logs
+                const productId = "b686560e-3930-4881-b700-00050631f4c9";
+
+                const response = await fetch('/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        productId: productId,
+                        quantity: 1
+                    }),
+                    credentials: 'include' // IMPORTANT: pour envoyer les cookies
+                });
+
+                const result = await response.json();
+                log(`Réponse: ${JSON.stringify(result)}`);
+
+                if (result.success) {
+                    log(`✅ Succès! Nouveau total: ${result.count} articles`);
+                } else {
+                    log(`❌ Erreur: ${result.message}`);
+                }
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`);
+            }
+        }
+
+        async function testViewCart() {
+            try {
+                log("=== Voir Panier ===");
+
+                const response = await fetch('/api/cart/details', {
+                    credentials: 'include' // IMPORTANT
+                });
+
+                const result = await response.json();
+                log(`Panier: ${JSON.stringify(result, null, 2)}`);
+
+                if (result.success) {
+                    log(`✅ Panier récupéré: ${result.itemCount} articles`);
+                }
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`);
+            }
+        }
+
+        async function testCheckCookies() {
+            log("=== Cookies du navigateur ===");
+            log(`document.cookie: ${document.cookie || '(vide)'}`);
+
+            try {
+                const response = await fetch('/api/debugcart/check-cookies', {
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+                log(`Cookies serveur: ${JSON.stringify(result, null, 2)}`);
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

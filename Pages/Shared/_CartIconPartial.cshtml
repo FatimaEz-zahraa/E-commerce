@@ -1,6 +1,5 @@
 ﻿@* Pages/Shared/_CartIconPartial.cshtml *@
 @inject E_commerce.Services.Interfaces.ICartService CartService
-@using E_commerce.Helpers
 
 @{
     try
@@ -9,23 +8,14 @@
             ? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             : null;
 
-        int itemCount;
-
-        if (userId == null)
-        {
-            // Pour les visiteurs : utiliser le cookie
-            var cart = CookieHelper.GetOrCreateCart(Context);
-            itemCount = cart.Items?.Sum(i => i.Quantity) ?? 0;
-        }
-        else
-        {
-            // Pour les utilisateurs connectés : utiliser le service
-            var cartId = CookieHelper.GetOrCreateCartId(Context);
-            itemCount = await CartService.GetCartItemCountAsync(userId, cartId);
-        }
+        // Le service gère automatiquement :
+        // - cookie si userId == null
+        // - DB si user connecté
+        var itemCount = await CartService.GetCartItemCountAsync(userId);
 
         <a asp-page="/Cart/Index" class="nav-link position-relative">
             <i class="fas fa-shopping-cart fa-lg"></i>
+
             @if (itemCount > 0)
             {
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -35,9 +25,9 @@
             }
         </a>
     }
-    catch (Exception ex)
+    catch
     {
-        // En cas d'erreur, afficher juste l'icône sans badge
+        // Sécurité : afficher seulement l'icône si erreur
         <a asp-page="/Cart/Index" class="nav-link position-relative">
             <i class="fas fa-shopping-cart fa-lg"></i>
         </a>

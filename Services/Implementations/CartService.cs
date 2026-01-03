@@ -1,5 +1,4 @@
-﻿// Services/Implementations/CartService.cs
-using E_commerce.Data;
+﻿using E_commerce.Data;
 using E_commerce.Helpers;
 using E_commerce.Models.DTOs;
 using E_commerce.Models.Entities;
@@ -7,6 +6,7 @@ using E_commerce.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
 namespace E_commerce.Services.Implementations
 {
@@ -29,103 +29,116 @@ namespace E_commerce.Services.Implementations
             _httpContextAccessor = httpContextAccessor;
         }
 
-        private HttpContext GetHttpContext()
-        {
-            return _httpContextAccessor.HttpContext
-                ?? throw new InvalidOperationException("HTTP Context is not available");
-        }
+        private HttpContext HttpContext =>
+            _httpContextAccessor.HttpContext
+            ?? throw new InvalidOperationException("HttpContext unavailable");
 
-        public async Task<CartDto> GetCartAsync(string? userId, string cartId)
+        // =========================
+        // GET CART
+        // =========================
+        public async Task<CartDto> GetCartAsync(string? userId)
         {
-            // Utilisateur anonyme : retourner le cookie
             if (string.IsNullOrEmpty(userId))
-            {
-                return CookieHelper.GetOrCreateCart(GetHttpContext());
-            }
+                return await BuildGuestCartAsync();
 
-            // Utilisateur connecté : vérifier le cache d'abord
             var cacheKey = $"cart_user_{userId}";
-            if (_cache.TryGetValue(cacheKey, out CartDto cachedCart))
-            {
-                return cachedCart;
-            }
+            if (_cache.TryGetValue(cacheKey, out CartDto cached))
+                return cached;
 
-            // Récupérer depuis la base de données
             var cart = await _context.Carts
                 .Include(c => c.Items)
-                    .ThenInclude(i => i.Product)
+                .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            CartDto cartDto;
 
             if (cart == null)
             {
-                // Créer un nouveau panier en base
-                cart = new Cart
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    CreatedAt = DateTime.UtcNow
-                };
+                cart = new Cart { UserId = userId };
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
-
-                cartDto = new CartDto
-                {
-                    Id = cart.Id.ToString(),
-                    UserId = cart.UserId,
-                    Items = new List<CartItemDto>(),
-                    CreatedAt = cart.CreatedAt
-                };
-            }
-            else
-            {
-                // Mapper l'entité vers DTO
-                cartDto = MapToDto(cart);
             }
 
-            // Mettre en cache pour 30 minutes
-            _cache.Set(cacheKey, cartDto, TimeSpan.FromMinutes(30));
-            return cartDto;
+            var dto = MapToDto(cart);
+            _cache.Set(cacheKey, dto, TimeSpan.FromMinutes(30));
+            return dto;
         }
 
-        public async Task AddToCartAsync(string? userId, string cartId, Guid productId, int quantity = 1)
+        
+        private async Task<CartDto> BuildGuestCartAsync()
         {
-            if (quantity <= 0)
-                throw new ArgumentException("La quantité doit être supérieure à 0", nameof(quantity));
+            var cookieCart = CookieHelper.GetOrCreateCart(HttpContext);
+            if (!cookieCart.Items.Any()) return new CartDto();
 
-            // Récupérer le produit
-            var product = await _productService.GetByIdAsync(productId);
-            if (product == null)
-                throw new ArgumentException("Produit non trouvé", nameof(productId));
+            var productIds = cookieCart.Items.Select(i => i.ProductId).ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id) && p.IsActive)
+                .ToListAsync();
 
-            // Vérifier le stock
-            if (product.StockQuantity <= 0)
-                throw new InvalidOperationException("Produit en rupture de stock");
-
-            var availableQuantity = Math.Min(quantity, Math.Min(product.StockQuantity, 10));
-
-            // Utilisateur anonyme : cookie
-            if (string.IsNullOrEmpty(userId))
+            var items = new List<CartItemDto>();
+            foreach (var cookieItem in cookieCart.Items)
             {
-                var cartItem = new CartItemDto
+                var product = products.FirstOrDefault(p => p.Id == cookieItem.ProductId);
+                if (product == null) continue; // Produit n'existe plus en DB
+
+                items.Add(new CartItemDto
                 {
-                    ProductId = productId,
+                    ProductId = product.Id,
                     ProductName = product.Name,
                     Price = product.Price,
-                    Quantity = availableQuantity,
+                    Quantity = Math.Min(cookieItem.Quantity, product.StockQuantity),
                     ImageUrl = product.ImageUrl,
                     Brand = product.Brand,
                     Category = product.Category,
                     IsAvailable = product.StockQuantity > 0,
-                    MaxQuantity = Math.Min(product.StockQuantity, 10)
-                };
+                    MaxQuantity = product.StockQuantity
+                });
+            }
 
-                CookieHelper.AddToCart(GetHttpContext(), cartItem);
+            var cartDto = new CartDto { Items = items };
+            cartDto.CalculateTotals();
+            return cartDto;
+        }
+
+        // =========================
+        // ADD ITEM
+        // =========================
+        public async Task AddToCartAsync(string? userId, Guid productId, int quantity = 1)
+        {
+            Console.WriteLine($"DEBUG AddToCartAsync: userId={userId}, productId={productId}, quantity={quantity}");
+
+            // SUPPRIMEZ les Include pour Brand et Category
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == productId && p.IsActive);
+
+            if (product == null)
+                throw new Exception($"Produit introuvable avec ID: {productId}");
+
+            if (product.StockQuantity <= 0)
+                throw new Exception($"Produit en rupture de stock: {product.Name}");
+
+            quantity = Math.Min(quantity, product.StockQuantity);
+            Console.WriteLine($"DEBUG: Produit trouvé - {product.Name}, Stock: {product.StockQuantity}, Qty ajoutée: {quantity}");
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                // Ajouter au cookie pour utilisateur non connecté
+                Console.WriteLine($"DEBUG: Ajout au cookie (guest)");
+
+                CookieHelper.AddProductToCart(
+                    context: HttpContext,
+                    productId: product.Id,
+                    name: product.Name,
+                    price: product.Price,
+                    quantity: quantity,
+                    imageUrl: product.ImageUrl,
+                    brand: product.Brand, // SIMPLE : string direct
+                    category: product.Category // SIMPLE : string direct
+                );
+
+                Console.WriteLine($"DEBUG: Cookie mis à jour");
                 return;
             }
 
-            // Utilisateur connecté : base de données
+            // Pour utilisateur connecté - sauvegarder en base
             var cart = await _context.Carts
                 .Include(c => c.Items)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
@@ -134,255 +147,328 @@ namespace E_commerce.Services.Implementations
             {
                 cart = new Cart
                 {
-                    Id = Guid.NewGuid(),
                     UserId = userId,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.Carts.Add(cart);
             }
 
-            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
-            if (existingItem != null)
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
             {
-                existingItem.Quantity += availableQuantity;
-                existingItem.Quantity = Math.Min(existingItem.Quantity, Math.Min(product.StockQuantity, 10));
-                existingItem.UpdatedAt = DateTime.UtcNow;
+                var newQuantity = item.Quantity + quantity;
+                item.Quantity = Math.Min(newQuantity, product.StockQuantity);
+                Console.WriteLine($"DEBUG: Produit existant - nouvelle quantité: {item.Quantity}");
             }
             else
             {
                 cart.Items.Add(new CartItem
                 {
-                    Id = Guid.NewGuid(),
                     ProductId = productId,
-                    Quantity = availableQuantity,
-                    AddedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    Quantity = Math.Min(quantity, product.StockQuantity),
+                    AddedAt = DateTime.UtcNow
                 });
+                Console.WriteLine($"DEBUG: Nouvel item ajouté");
             }
 
             cart.UpdatedAt = DateTime.UtcNow;
+            _context.Carts.Update(cart);
             await _context.SaveChangesAsync();
 
             // Invalider le cache
             _cache.Remove($"cart_user_{userId}");
+
+            Console.WriteLine($"DEBUG: Panier sauvegardé en DB");
         }
 
-        public async Task UpdateQuantityAsync(string? userId, string cartId, Guid productId, int quantity)
+        // =========================
+        // UPDATE QUANTITY
+        // =========================
+        public async Task UpdateQuantityAsync(string? userId, Guid productId, int quantity)
         {
+            Console.WriteLine($"DEBUG UpdateQuantity: userId={userId}, productId={productId}, quantity={quantity}");
+
             if (quantity < 0)
-                throw new ArgumentException("La quantité ne peut pas être négative", nameof(quantity));
+                throw new ArgumentException("La quantité ne peut pas être négative");
 
-            // Récupérer le produit pour vérifier le stock
-            var product = await _productService.GetByIdAsync(productId);
-            if (product == null)
-                throw new ArgumentException("Produit non trouvé", nameof(productId));
-
-            var maxQuantity = Math.Min(product.StockQuantity, 10);
-            var finalQuantity = Math.Min(quantity, maxQuantity);
-
-            // Utilisateur anonyme : cookie
             if (string.IsNullOrEmpty(userId))
             {
-                CookieHelper.UpdateCartQuantity(GetHttpContext(), productId, finalQuantity);
+                CookieHelper.UpdateCartQuantity(HttpContext, productId, quantity);
                 return;
             }
 
-            // Utilisateur connecté : base de données
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (cart == null) return;
+
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item == null) return;
+
+            // Vérifier le stock
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == productId);
+
+            if (product != null)
+            {
+                quantity = Math.Min(quantity, product.StockQuantity);
+            }
+
+            if (quantity <= 0)
+            {
+                cart.Items.Remove(item);
+                Console.WriteLine($"DEBUG: Item supprimé (quantité 0)");
+            }
+            else
+            {
+                item.Quantity = quantity;
+                Console.WriteLine($"DEBUG: Quantité mise à jour à {quantity}");
+            }
+
+            cart.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            _cache.Remove($"cart_user_{userId}");
+        }
+
+        // =========================
+        // REMOVE ITEM
+        // =========================
+        public async Task RemoveFromCartAsync(string? userId, Guid productId)
+        {
+            Console.WriteLine($"DEBUG RemoveFromCart: userId={userId}, productId={productId}");
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                CookieHelper.RemoveFromCart(HttpContext, productId);
+                return;
+            }
+
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            var item = cart?.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item == null) return;
+
+            cart!.Items.Remove(item);
+            cart.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            _cache.Remove($"cart_user_{userId}");
+        }
+
+        // =========================
+        // CLEAR CART
+        // =========================
+        public async Task ClearCartAsync(string? userId)
+        {
+            Console.WriteLine($"DEBUG ClearCart: userId={userId}");
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                CookieHelper.ClearCart(HttpContext);
+                return;
+            }
+
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (cart == null) return;
+
+            cart.Items.Clear();
+            cart.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            _cache.Remove($"cart_user_{userId}");
+        }
+
+        // =========================
+        // COUNT ITEMS
+        // =========================
+        public async Task<int> GetCartItemCountAsync(string? userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                var Count = CookieHelper.GetCartItemCount(HttpContext);
+                Console.WriteLine($"DEBUG GetCartItemCount (guest): {Count}");
+                return Count;
+            }
+
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            var count = cart?.Items.Sum(i => i.Quantity) ?? 0;
+            Console.WriteLine($"DEBUG GetCartItemCount (user): {count}");
+            return count;
+        }
+
+        // =========================
+        // MERGE COOKIE → USER
+        // =========================
+        public async Task MergeCookieCartToUserAsync(string userId)
+        {
+            Console.WriteLine($"DEBUG MergeCookieCartToUser pour userId: {userId}");
+
+            var cookieCart = CookieHelper.GetOrCreateCart(HttpContext);
+            if (!cookieCart.Items.Any())
+            {
+                Console.WriteLine("DEBUG: Cookie vide, rien à fusionner");
+                return;
+            }
+
+            Console.WriteLine($"DEBUG: {cookieCart.Items.Count} items à fusionner");
+
             var cart = await _context.Carts
                 .Include(c => c.Items)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (cart == null)
-                return;
-
-            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
-            if (item != null)
             {
-                if (finalQuantity == 0)
+                cart = new Cart
                 {
-                    cart.Items.Remove(item);
-                }
-                else
-                {
-                    item.Quantity = finalQuantity;
-                    item.UpdatedAt = DateTime.UtcNow;
-                }
-
-                cart.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-
-                // Invalider le cache
-                _cache.Remove($"cart_user_{userId}");
-            }
-        }
-
-        public async Task RemoveFromCartAsync(string? userId, string cartId, Guid productId)
-        {
-            // Utilisateur anonyme : cookie
-            if (string.IsNullOrEmpty(userId))
-            {
-                CookieHelper.RemoveFromCart(GetHttpContext(), productId);
-                return;
-            }
-
-            // Utilisateur connecté : base de données
-            var cart = await _context.Carts
-                .Include(c => c.Items)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (cart != null)
-            {
-                var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
-                if (item != null)
-                {
-                    cart.Items.Remove(item);
-                    cart.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-
-                    // Invalider le cache
-                    _cache.Remove($"cart_user_{userId}");
-                }
-            }
-        }
-
-        public async Task ClearCartAsync(string? userId, string cartId)
-        {
-            // Utilisateur anonyme : cookie
-            if (string.IsNullOrEmpty(userId))
-            {
-                CookieHelper.ClearCart(GetHttpContext());
-                return;
-            }
-
-            // Utilisateur connecté : base de données
-            var cart = await _context.Carts
-                .Include(c => c.Items)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (cart != null)
-            {
-                cart.Items.Clear();
-                cart.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-
-                // Invalider le cache
-                _cache.Remove($"cart_user_{userId}");
-            }
-        }
-
-        public async Task<int> GetCartItemCountAsync(string? userId, string cartId)
-        {
-            // Utilisateur anonyme : cookie
-            if (string.IsNullOrEmpty(userId))
-            {
-                return CookieHelper.GetCartItemCount(GetHttpContext());
-            }
-
-            // Utilisateur connecté : cache ou base de données
-            var cacheKey = $"cart_user_{userId}";
-            if (_cache.TryGetValue(cacheKey, out CartDto cachedCart))
-            {
-                return cachedCart.TotalItems;
-            }
-
-            var cart = await _context.Carts
-                .Include(c => c.Items)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            return cart?.Items.Sum(i => i.Quantity) ?? 0;
-        }
-
-        public async Task MergeCartAsync(string userId, string anonymousCartId)
-        {
-            // Récupérer le panier du cookie
-            var cookieCart = CookieHelper.GetOrCreateCart(GetHttpContext());
-
-            // Si le cookie est vide, rien à faire
-            if (!cookieCart.Items.Any())
-                return;
-
-            // Récupérer le panier utilisateur ou en créer un nouveau
-            var userCart = await _context.Carts
-                .Include(c => c.Items)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (userCart == null)
-            {
-                userCart = new Cart
-                {
-                    Id = Guid.NewGuid(),
                     UserId = userId,
                     CreatedAt = DateTime.UtcNow
                 };
-                _context.Carts.Add(userCart);
+                _context.Carts.Add(cart);
             }
 
-            // Fusionner les articles
             foreach (var cookieItem in cookieCart.Items)
             {
-                var existingItem = userCart.Items.FirstOrDefault(i => i.ProductId == cookieItem.ProductId);
-                if (existingItem != null)
+                // Vérifier que le produit existe
+                var product = await _context.Products
+                    .FirstOrDefaultAsync(p => p.Id == cookieItem.ProductId && p.IsActive);
+
+                if (product == null || product.StockQuantity <= 0)
                 {
-                    // Mettre à jour la quantité
-                    existingItem.Quantity += cookieItem.Quantity;
-                    existingItem.UpdatedAt = DateTime.UtcNow;
+                    Console.WriteLine($"DEBUG: Produit {cookieItem.ProductId} non trouvé ou non disponible");
+                    continue;
+                }
+
+                var existing = cart.Items.FirstOrDefault(i => i.ProductId == cookieItem.ProductId);
+                if (existing != null)
+                {
+                    var newQuantity = existing.Quantity + cookieItem.Quantity;
+                    existing.Quantity = Math.Min(newQuantity, product.StockQuantity);
+                    Console.WriteLine($"DEBUG: Fusion item existant - nouvelle quantité: {existing.Quantity}");
                 }
                 else
                 {
-                    // Ajouter un nouvel article
-                    userCart.Items.Add(new CartItem
+                    cart.Items.Add(new CartItem
                     {
-                        Id = Guid.NewGuid(),
                         ProductId = cookieItem.ProductId,
-                        Quantity = cookieItem.Quantity,
-                        AddedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        Quantity = Math.Min(cookieItem.Quantity, product.StockQuantity),
+                        AddedAt = DateTime.UtcNow
+                    });
+                    Console.WriteLine($"DEBUG: Nouvel item fusionné: {cookieItem.ProductId}");
+                }
+            }
+
+            cart.UpdatedAt = DateTime.UtcNow;
+            _context.Carts.Update(cart);
+            await _context.SaveChangesAsync();
+
+            // Vider le cookie après fusion
+            CookieHelper.ClearCart(HttpContext);
+            _cache.Remove($"cart_user_{userId}");
+
+            Console.WriteLine($"DEBUG: Fusion terminée - {cart.Items.Count} items dans le panier utilisateur");
+        }
+
+        // =========================
+        // MAPPER ET CALCULS
+        // =========================
+        private CartDto MapToDto(Cart cart)
+        {
+            var dto = new CartDto
+            {
+                Id = cart.Id.ToString(),
+                UserId = cart.UserId ?? "",
+                CreatedAt = cart.CreatedAt,
+                UpdatedAt = cart.UpdatedAt ?? DateTime.UtcNow,
+                Items = new List<CartItemDto>()
+            };
+
+            foreach (var item in cart.Items)
+            {
+                if (item.Product != null && item.Product.IsActive)
+                {
+                    dto.Items.Add(new CartItemDto
+                    {
+                        ProductId = item.ProductId,
+                        ProductName = item.Product.Name,
+                        Price = item.Product.Price,
+                        Quantity = Math.Min(item.Quantity, item.Product.StockQuantity),
+                        ImageUrl = item.Product.ImageUrl,
+                        // SIMPLE : Accéder directement aux strings
+                        Brand = item.Product.Brand,
+                        Category = item.Product.Category,
+                        IsAvailable = item.Product.StockQuantity > 0,
+                        MaxQuantity = Math.Min(item.Product.StockQuantity, 10)
                     });
                 }
             }
 
-            userCart.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            // Vider le cookie
-            CookieHelper.ClearCart(GetHttpContext());
-
-            // Invalider le cache
-            _cache.Remove($"cart_user_{userId}");
+            dto.CalculateTotals();
+            Console.WriteLine($"DEBUG MapToDto: {dto.Items.Count} items, Total: {dto.Total:C}");
+            return dto;
         }
 
-        private CartDto MapToDto(Cart cart)
+        // =========================
+        // METHODE UTILITAIRE POUR DEBUG
+        // =========================
+        public async Task<string> DebugCartAsync(string? userId)
         {
-            var items = new List<CartItemDto>();
+            var cookieCart = CookieHelper.GetOrCreateCart(HttpContext);
 
-            foreach (var item in cart.Items)
+            var debugInfo = $"=== DEBUG CART ===\n";
+            debugInfo += $"User ID: {userId ?? "Guest"}\n";
+            debugInfo += $"Cookie items: {cookieCart.Items.Count}\n";
+
+            foreach (var item in cookieCart.Items)
             {
-                var product = item.Product;
-                if (product == null || !product.IsActive)
-                    continue;
-
-                items.Add(new CartItemDto
-                {
-                    ProductId = item.ProductId,
-                    ProductName = product.Name,
-                    Price = product.Price,
-                    Quantity = item.Quantity,
-                    ImageUrl = product.ImageUrl,
-                    Brand = product.Brand,
-                    Category = product.Category,
-                    IsAvailable = product.StockQuantity > 0,
-                    MaxQuantity = Math.Min(product.StockQuantity, 10)
-                });
+                debugInfo += $"  - {item.ProductId}: {item.ProductName} x{item.Quantity}\n";
             }
 
-            return new CartDto
+            if (!string.IsNullOrEmpty(userId))
             {
-                Id = cart.Id.ToString(),
-                UserId = cart.UserId,
-                Items = items,
-                CreatedAt = cart.CreatedAt,
-                UpdatedAt = cart.UpdatedAt
-            };
+                var dbCart = await _context.Carts
+                    .Include(c => c.Items)
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
+
+                debugInfo += $"DB Cart items: {dbCart?.Items.Count ?? 0}\n";
+                if (dbCart != null)
+                {
+                    foreach (var item in dbCart.Items)
+                    {
+                        debugInfo += $"  - {item.ProductId}: x{item.Quantity}\n";
+                    }
+                }
+            }
+
+            return debugInfo;
+        }
+
+        // =========================
+        // DEBUG PRODUCT STRUCTURE
+        // =========================
+        public async Task<string> DebugProductStructure(Guid productId)
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == productId);
+
+            if (product == null)
+                return "Produit non trouvé";
+
+            var debug = $"=== DEBUG PRODUCT STRUCTURE ===\n";
+            debug += $"Product ID: {product.Id}\n";
+            debug += $"Product Name: {product.Name}\n";
+            debug += $"Brand: {product.Brand ?? "(null)"}\n";
+            debug += $"Brand type: {product.Brand?.GetType().Name ?? "null"}\n";
+            debug += $"Category: {product.Category ?? "(null)"}\n";
+            debug += $"Category type: {product.Category?.GetType().Name ?? "null"}\n";
+
+            return debug;
         }
     }
 }

@@ -1,428 +1,193 @@
-﻿// Helpers/CookieHelper.cs
-using System.Text.Json;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using E_commerce.Models.DTOs;
 
 namespace E_commerce.Helpers
 {
     public static class CookieHelper
     {
-        private const string CartCookieName = "Cart";
-        private const string CartIdCookieName = "CartId"; // Pour l'ancienne méthode
+        private const string CartCookieName = "ECOM_CART";
 
-        // ==============================================
-        // NOUVEAU SYSTÈME : Panier complet dans le cookie
-        // ==============================================
-
-        public static CartDto GetOrCreateCart(HttpContext context)
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
-            var cartJson = context.Request.Cookies[CartCookieName];
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            PropertyNameCaseInsensitive = true
+        };
 
-            if (string.IsNullOrEmpty(cartJson))
+        // =========================
+        // Récupérer le panier côté serveur (équivalent à GetCartFromCookie)
+        // =========================
+        public static CartCookieDto GetCart(HttpContext context) => GetOrCreateCart(context);
+
+        public static CartCookieDto GetOrCreateCart(HttpContext context)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+
+            if (context.Request.Cookies.TryGetValue(CartCookieName, out var cookieValue) && !string.IsNullOrEmpty(cookieValue))
             {
-                return CreateNewCart(context);
-            }
-
-            try
-            {
-                var options = GetJsonSerializerOptions();
-                var cart = JsonSerializer.Deserialize<CartDto>(cartJson, options);
-
-                // S'assurer que le cart n'est pas null
-                if (cart == null)
+                try
                 {
-                    return CreateNewCart(context);
+                    return JsonSerializer.Deserialize<CartCookieDto>(cookieValue, JsonOptions) ?? new CartCookieDto();
                 }
-
-                // S'assurer que les items ne sont pas null
-                cart.Items ??= new List<CartItemDto>();
-
-                return cart;
-            }
-            catch (JsonException)
-            {
-                return CreateNewCart(context);
-            }
-        }
-
-        private static CartDto CreateNewCart(HttpContext context)
-        {
-            var newCart = new CartDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                CreatedAt = DateTime.UtcNow,
-                Items = new List<CartItemDto>()
-            };
-
-            SaveCart(context, newCart);
-            return newCart;
-        }
-
-        public static void SaveCart(HttpContext context, CartDto cart)
-        {
-            cart.UpdatedAt = DateTime.UtcNow;
-
-            var options = GetJsonSerializerOptions();
-            var cartJson = JsonSerializer.Serialize(cart, options);
-
-            context.Response.Cookies.Append(CartCookieName, cartJson, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = context.Request.IsHttps,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(30),
-                IsEssential = true,
-                MaxAge = TimeSpan.FromDays(30)
-            });
-        }
-
-        private static JsonSerializerOptions GetJsonSerializerOptions()
-        {
-            return new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false,
-                PropertyNameCaseInsensitive = true
-            };
-        }
-
-        // Méthodes simplifiées pour l'ajout direct
-        public static void AddToCart(HttpContext context, CartItemDto item)
-        {
-            var cart = GetOrCreateCart(context);
-            cart.AddItem(item);
-            SaveCart(context, cart);
-        }
-
-        public static void UpdateCartQuantity(HttpContext context, Guid productId, int quantity)
-        {
-            var cart = GetOrCreateCart(context);
-            cart.UpdateQuantity(productId, quantity);
-            SaveCart(context, cart);
-        }
-
-        public static void RemoveFromCart(HttpContext context, Guid productId)
-        {
-            var cart = GetOrCreateCart(context);
-            cart.RemoveItem(productId);
-            SaveCart(context, cart);
-        }
-
-        public static void ClearCart(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            cart.Clear();
-            SaveCart(context, cart);
-        }
-
-        public static int GetCartItemCount(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            return cart.TotalItems;
-        }
-
-        public static decimal GetCartTotal(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            return cart.Total;
-        }
-
-        public static bool IsProductInCart(HttpContext context, Guid productId)
-        {
-            var cart = GetOrCreateCart(context);
-            return cart.Items.Any(i => i.ProductId == productId);
-        }
-
-        public static int GetProductQuantity(HttpContext context, Guid productId)
-        {
-            var cart = GetOrCreateCart(context);
-            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
-            return item?.Quantity ?? 0;
-        }
-
-        // ==============================================
-        // ANCIEN SYSTÈME : Migration et compatibilité
-        // ==============================================
-
-        public static void MigrateOldCartToNew(HttpContext context)
-        {
-            var oldCartId = context.Request.Cookies[CartIdCookieName];
-            if (!string.IsNullOrEmpty(oldCartId) && !context.Request.Cookies.ContainsKey(CartCookieName))
-            {
-                // Créer un nouveau panier avec l'ancien ID
-                var newCart = new CartDto
+                catch
                 {
-                    Id = oldCartId,
-                    CreatedAt = DateTime.UtcNow,
-                    Items = new List<CartItemDto>()
-                };
-
-                SaveCart(context, newCart);
-                // Supprimer l'ancien cookie
-                context.Response.Cookies.Delete(CartIdCookieName);
+                    return new CartCookieDto();
+                }
             }
+            return new CartCookieDto();
         }
 
-        public static CartDto GetOrCreateCartWithMigration(HttpContext context)
+        // =========================
+        // Ajouter un produit au panier
+        // =========================
+        public static void AddProductToCart(HttpContext context, Guid productId, string name, decimal price, int quantity = 1, string? imageUrl = null, string? brand = null, string? category = null)
         {
-            // Migrer d'abord si nécessaire
-            MigrateOldCartToNew(context);
-            // Puis utiliser le nouveau système
-            return GetOrCreateCart(context);
-        }
+            var cart = GetOrCreateCart(context);
 
-        // ==============================================
-        // MÉTHODES DE L'ANCIEN SYSTÈME (pour compatibilité)
-        // ==============================================
+            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
 
-        public static string GetOrCreateCartId(HttpContext context)
-        {
-            var cartId = context.Request.Cookies[CartIdCookieName];
-
-            if (string.IsNullOrEmpty(cartId))
+            if (existingItem != null)
+                existingItem.Quantity += quantity;
+            else
             {
-                cartId = Guid.NewGuid().ToString();
-                context.Response.Cookies.Append(CartIdCookieName, cartId, new CookieOptions
+                cart.Items.Add(new CartItemCookieDto
                 {
-                    HttpOnly = true,
-                    Secure = context.Request.IsHttps,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddDays(30),
-                    IsEssential = true
+                    ProductId = productId,
+                    ProductName = name,
+                    Price = price,
+                    Quantity = quantity,
+                    ImageUrl = imageUrl,
+                    Brand = brand,
+                    Category = category,
+                    AddedAt = DateTime.UtcNow
                 });
             }
 
-            return cartId;
+            SaveCart(context, cart);
         }
 
-        public static string GetCartId(HttpContext context)
+        // =========================
+        // Mettre à jour la quantité
+        // =========================
+        public static void UpdateCartQuantity(HttpContext context, Guid productId, int quantity)
         {
             var cart = GetOrCreateCart(context);
-            return cart.Id;
-        }
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
 
-        public static void RemoveCartCookie(HttpContext context)
-        {
-            context.Response.Cookies.Delete(CartIdCookieName);
-        }
-
-        public static void ClearAllCartCookies(HttpContext context)
-        {
-            context.Response.Cookies.Delete(CartCookieName);
-            context.Response.Cookies.Delete(CartIdCookieName);
-        }
-
-        // ==============================================
-        // MÉTHODES UTILITAIRES SUPPLEMENTAIRES
-        // ==============================================
-
-        /// <summary>
-        /// Ajoute un produit au panier avec toutes les informations nécessaires
-        /// </summary>
-        public static void AddProductToCart(HttpContext context, Guid productId, string productName,
-                                            decimal price, int quantity = 1, string? imageUrl = null,
-                                            string? brand = null, string? category = null)
-        {
-            var cartItem = new CartItemDto
+            if (item != null)
             {
-                ProductId = productId,
-                ProductName = productName,
-                Price = price,
-                Quantity = quantity,
-                ImageUrl = imageUrl,
-                Brand = brand,
-                Category = category,
-                IsAvailable = true,
-                MaxQuantity = 10 // Valeur par défaut
+                if (quantity <= 0) cart.Items.Remove(item);
+                else item.Quantity = quantity;
+
+                SaveCart(context, cart);
+            }
+        }
+
+        // =========================
+        // Retirer un produit
+        // =========================
+        public static void RemoveFromCart(HttpContext context, Guid productId)
+        {
+            var cart = GetOrCreateCart(context);
+            if (cart.Items.RemoveAll(i => i.ProductId == productId) > 0)
+                SaveCart(context, cart);
+        }
+
+        // =========================
+        // Vider le panier
+        // =========================
+        public static void ClearCart(HttpContext context)
+        {
+            var options = new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddDays(-1),
+                Path = "/"
             };
-
-            AddToCart(context, cartItem);
+            context.Response.Cookies.Append(CartCookieName, "", options);
         }
 
-        /// <summary>
-        /// Vérifie si le panier est vide
-        /// </summary>
-        public static bool IsCartEmpty(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            return !cart.Items.Any();
-        }
+        // =========================
+        // Nombre total d'articles
+        // =========================
+        public static int GetCartItemCount(HttpContext context) => GetOrCreateCart(context).Items.Sum(i => i.Quantity);
 
-        /// <summary>
-        /// Obtient le nombre de produits différents (pas la quantité totale)
-        /// </summary>
-        public static int GetProductCount(HttpContext context)
+        // =========================
+        // Sauvegarder le panier côté cookie
+        // =========================
+        private static void SaveCart(HttpContext context, CartCookieDto cart)
         {
-            var cart = GetOrCreateCart(context);
-            return cart.Items.Count;
-        }
+            cart.Items.RemoveAll(i => i.Quantity <= 0);
 
-        /// <summary>
-        /// Obtient le sous-total du panier (sans livraison ni taxes)
-        /// </summary>
-        public static decimal GetCartSubtotal(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            return cart.Subtotal;
-        }
+            var serializedCart = JsonSerializer.Serialize(cart, JsonOptions);
 
-        /// <summary>
-        /// Obtient les frais de livraison
-        /// </summary>
-        public static decimal GetShippingCost(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            return cart.ShippingCost;
-        }
-
-        /// <summary>
-        /// Obtient le montant des taxes
-        /// </summary>
-        public static decimal GetTaxAmount(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            return cart.Tax;
-        }
-
-        /// <summary>
-        /// Copie le panier du cookie vers un autre cookie (pour backup)
-        /// </summary>
-        public static void BackupCart(HttpContext context, string backupCookieName = "CartBackup")
-        {
-            var cart = GetOrCreateCart(context);
-            var options = GetJsonSerializerOptions();
-            var cartJson = JsonSerializer.Serialize(cart, options);
-
-            context.Response.Cookies.Append(backupCookieName, cartJson, new CookieOptions
+            var options = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = context.Request.IsHttps,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7),
                 IsEssential = true,
-                MaxAge = TimeSpan.FromDays(7)
-            });
-        }
-
-        /// <summary>
-        /// Restaure le panier depuis un backup
-        /// </summary>
-        public static bool RestoreCart(HttpContext context, string backupCookieName = "CartBackup")
-        {
-            var backupJson = context.Request.Cookies[backupCookieName];
-            if (string.IsNullOrEmpty(backupJson))
-                return false;
-
-            try
-            {
-                var options = GetJsonSerializerOptions();
-                var backupCart = JsonSerializer.Deserialize<CartDto>(backupJson, options);
-
-                if (backupCart != null)
-                {
-                    SaveCart(context, backupCart);
-                    // Supprimer le backup après restauration
-                    context.Response.Cookies.Delete(backupCookieName);
-                    return true;
-                }
-            }
-            catch (JsonException)
-            {
-                // En cas d'erreur, on ignore simplement
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Vide tous les cookies liés au panier (nouveau et ancien système)
-        /// </summary>
-        public static void ResetCart(HttpContext context)
-        {
-            ClearAllCartCookies(context);
-
-            // Créer un nouveau panier vide
-            var newCart = new CartDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                CreatedAt = DateTime.UtcNow,
-                Items = new List<CartItemDto>()
+                SameSite = SameSiteMode.Lax,
+                Secure = context.Request.IsHttps,
+                Expires = DateTimeOffset.UtcNow.AddDays(7),
+                Path = "/"
             };
 
-            SaveCart(context, newCart);
+            context.Response.Cookies.Append(CartCookieName, serializedCart, options);
         }
 
-        /// <summary>
-        /// Exporte le panier en JSON (pour debug ou sauvegarde)
-        /// </summary>
-        public static string ExportCartToJson(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true
-            };
-
-            return JsonSerializer.Serialize(cart, options);
-        }
-
-        /// <summary>
-        /// Importe un panier depuis du JSON
-        /// </summary>
-        public static bool ImportCartFromJson(HttpContext context, string cartJson)
+        // =========================
+        // DEBUG : afficher le panier
+        // =========================
+        public static string DebugCart(HttpContext context)
         {
             try
             {
-                var options = GetJsonSerializerOptions();
-                var cart = JsonSerializer.Deserialize<CartDto>(cartJson, options);
+                var cart = GetOrCreateCart(context);
 
-                if (cart != null)
+                var debugInfo = $"=== DEBUG CART COOKIE ===\n";
+                debugInfo += $"URL: {context.Request.Path}\n";
+                debugInfo += $"Items count: {cart.Items.Count}\n";
+                debugInfo += $"Total quantity: {cart.Items.Sum(i => i.Quantity)}\n";
+                debugInfo += $"Total price: {cart.Items.Sum(i => i.Price * i.Quantity):C}\n\n";
+
+                foreach (var item in cart.Items)
                 {
-                    SaveCart(context, cart);
-                    return true;
+                    debugInfo += $"• {item.ProductName} x{item.Quantity} (ID={item.ProductId})\n";
+                    debugInfo += $"  Prix: {item.Price:C} x {item.Quantity} = {item.Price * item.Quantity:C}\n";
+                    debugInfo += $"  Marque: {item.Brand ?? "N/A"}\n";
+                    debugInfo += $"  Catégorie: {item.Category ?? "N/A"}\n";
+                    debugInfo += $"  Ajouté: {item.AddedAt:dd/MM/yyyy HH:mm}\n\n";
                 }
+
+                return debugInfo;
             }
-            catch (JsonException)
+            catch (Exception ex)
             {
-                // En cas d'erreur, on retourne false
+                return $"ERREUR DebugCart: {ex.Message}";
             }
-
-            return false;
         }
+    }
 
-        /// <summary>
-        /// Obtient un résumé du panier pour affichage
-        /// </summary>
-        public static CartSummaryDto GetCartSummary(HttpContext context)
-        {
-            var cart = GetOrCreateCart(context);
+    // =========================
+    // DTOs du cookie
+    // =========================
+    public class CartCookieDto
+    {
+        public List<CartItemCookieDto> Items { get; set; } = new List<CartItemCookieDto>();
+        public decimal TotalAmount => Items.Sum(i => i.Price * i.Quantity);
+        public int TotalItems => Items.Sum(i => i.Quantity);
+    }
 
-            return new CartSummaryDto
-            {
-                ItemCount = cart.TotalItems,
-                ProductCount = cart.Items.Count,
-                Subtotal = cart.Subtotal,
-                ShippingCost = cart.ShippingCost,
-                Tax = cart.Tax,
-                Total = cart.Total,
-                IsEligibleForFreeShipping = cart.Subtotal >= 50,
-                HasItems = cart.Items.Any()
-            };
-        }
-
-        /// <summary>
-        /// DTO pour le résumé du panier
-        /// </summary>
-        public class CartSummaryDto
-        {
-            public int ItemCount { get; set; }
-            public int ProductCount { get; set; }
-            public decimal Subtotal { get; set; }
-            public decimal ShippingCost { get; set; }
-            public decimal Tax { get; set; }
-            public decimal Total { get; set; }
-            public bool IsEligibleForFreeShipping { get; set; }
-            public bool HasItems { get; set; }
-        }
+    public class CartItemCookieDto
+    {
+        public Guid ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public int Quantity { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? Brand { get; set; }
+        public string? Category { get; set; }
+        public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+        public decimal TotalPrice => Price * Quantity;
     }
 }

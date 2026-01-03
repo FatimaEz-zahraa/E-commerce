@@ -1,113 +1,105 @@
-﻿// Models/DTOs/CartDto.cs
-using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace E_commerce.Models.DTOs
 {
     public class CartDto
     {
-        [JsonPropertyName("id")]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [JsonPropertyName("userId")]
-        public string? UserId { get; set; }
-
-        [JsonPropertyName("items")]
-        public List<CartItemDto> Items { get; set; } = new();
-
-        // Ces propriétés devraient être calculées, pas stockées
-        [JsonIgnore]
-        public decimal Subtotal => Items.Sum(i => i.Price * i.Quantity);
-
-        [JsonIgnore]
-        public decimal ShippingCost => Subtotal >= 50 ? 0 : 4.99m;
-
-        [JsonIgnore]
-        public decimal Tax => Math.Round(Subtotal * 0.2m, 2); // TVA 20%
-
-        [JsonIgnore]
-        public decimal Total => Subtotal + ShippingCost + Tax;
-
-        [JsonPropertyName("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public string UserId { get; set; } = string.Empty;
+        public List<CartItemDto> Items { get; set; } = new List<CartItemDto>();
 
-        [JsonPropertyName("updatedAt")]
-        public DateTime? UpdatedAt { get; set; }
+        // CHANGER ces propriétés pour avoir des setters
+        public decimal Subtotal { get; set; }
+        public decimal ShippingCost { get; set; } = 0;
+        public decimal Tax { get; set; } = 0;
+        public decimal Total { get; set; }
+        public int TotalItems { get; set; }
 
-        [JsonIgnore]
-        public int TotalItems => Items.Sum(i => i.Quantity);
+        // Anciennes propriétés calculées (garder pour compatibilité si nécessaire)
+        // public decimal Subtotal => Items.Sum(i => i.TotalPrice);
+        // public decimal Total => Subtotal + ShippingCost + Tax;
+        // public int TotalItems => Items.Sum(i => i.Quantity);
 
-        // Méthodes utilitaires pour le cookie
+        // =========================
+        // Méthodes utiles
+        // =========================
+
         public void AddItem(CartItemDto item)
         {
-            var existingItem = Items.FirstOrDefault(i => i.ProductId == item.ProductId);
-            if (existingItem != null)
+            var existing = Items.FirstOrDefault(i => i.ProductId == item.ProductId);
+            if (existing != null)
             {
-                existingItem.Quantity += item.Quantity;
-                existingItem.Quantity = Math.Min(existingItem.Quantity, existingItem.MaxQuantity);
+                existing.Quantity += item.Quantity;
             }
             else
             {
                 Items.Add(item);
             }
-        }
 
-        public void RemoveItem(Guid productId)
-        {
-            Items.RemoveAll(i => i.ProductId == productId);
+            // Recalculer les totaux
+            CalculateTotals();
         }
 
         public void UpdateQuantity(Guid productId, int quantity)
         {
-            var item = Items.FirstOrDefault(i => i.ProductId == productId);
-            if (item != null)
+            var existing = Items.FirstOrDefault(i => i.ProductId == productId);
+            if (existing != null)
             {
                 if (quantity <= 0)
-                {
-                    RemoveItem(productId);
-                }
+                    Items.Remove(existing);
                 else
-                {
-                    item.Quantity = Math.Min(quantity, item.MaxQuantity);
-                }
+                    existing.Quantity = quantity;
+
+                CalculateTotals();
+            }
+        }
+
+        public void RemoveItem(Guid productId)
+        {
+            var existing = Items.FirstOrDefault(i => i.ProductId == productId);
+            if (existing != null)
+            {
+                Items.Remove(existing);
+                CalculateTotals();
             }
         }
 
         public void Clear()
         {
             Items.Clear();
+            CalculateTotals();
+        }
+
+        // Méthode pour recalculer tous les totaux
+        public void CalculateTotals()
+        {
+            TotalItems = Items.Sum(i => i.Quantity);
+            Subtotal = Items.Sum(i => i.TotalPrice);
+
+            // Livraison gratuite au-dessus de 50€
+            ShippingCost = Subtotal > 50 ? 0 : 4.99m;
+
+            // TVA 20%
+            Tax = Subtotal * 0.20m;
+            Total = Subtotal + ShippingCost + Tax;
         }
     }
 
     public class CartItemDto
     {
-        [JsonPropertyName("productId")]
         public Guid ProductId { get; set; }
-
-        [JsonPropertyName("productName")]
         public string ProductName { get; set; } = string.Empty;
-
-        [JsonPropertyName("price")]
-        public decimal Price { get; set; }
-
-        [JsonPropertyName("quantity")]
         public int Quantity { get; set; }
-
-        [JsonPropertyName("imageUrl")]
-        public string? ImageUrl { get; set; }
-
-        [JsonPropertyName("brand")]
-        public string? Brand { get; set; }
-
-        [JsonPropertyName("category")]
-        public string? Category { get; set; }
-
-        [JsonPropertyName("isAvailable")]
-        public bool IsAvailable { get; set; } = true;
-
-        [JsonPropertyName("maxQuantity")]
-        public int MaxQuantity { get; set; } = 10;
-
-        [JsonIgnore]
+        public decimal Price { get; set; }
         public decimal TotalPrice => Price * Quantity;
+        public string? ImageUrl { get; set; }
+        public string? Brand { get; set; }
+        public string? Category { get; set; }
+        public bool IsAvailable { get; set; } = true;
+        public int MaxQuantity { get; set; } = 10;
     }
 }

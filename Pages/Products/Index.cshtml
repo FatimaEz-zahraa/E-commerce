@@ -203,9 +203,14 @@
                                 <div class="d-grid gap-2">
                                     @if (product.StockQuantity > 0)
                                     {
-                                        <button class="btn btn-warning" onclick="addToCart('@product.Id')">
-                                            <i class="fas fa-cart-plus me-2"></i>Ajouter au panier
-                                        </button>
+                                        <form method="post" asp-page-handler="AddToCart" class="d-inline">
+                                            <input type="hidden" name="productId" value="@product.Id" />
+                                            <input type="hidden" name="quantity" value="1" />
+                                            <button type="submit" class="btn btn-warning">
+                                                <i class="fas fa-cart-plus me-2"></i>Ajouter au panier
+                                            </button>
+                                        </form>
+
                                     }
                                     else
                                     {
@@ -368,15 +373,43 @@
         }
 
         // Fonction d'ajout au panier
-        function addToCart(productId) {
-            console.log('Ajout au panier du produit:', productId);
+                function addToCart(productId) {
+            console.log('--- CLICK ADD TO CART ---');
+            console.log('Produit ID:', productId);
 
-            // Simuler un appel API pour l'instant
+            // Lire l'état actuel du panier
+            let cartCookie = getCartFromCookie();
+            console.log('Contenu panier avant ajout:', cartCookie);
+
+            // Simuler l'ajout au panier côté client
             setTimeout(() => {
                 updateCartCount(1); // Incrémenter de 1
                 showNotification('Produit ajouté au panier !');
+
+                // Lire l'état du panier après ajout
+                cartCookie = getCartFromCookie();
+                console.log('Contenu panier après ajout:', cartCookie);
             }, 300);
         }
+
+        // Fonction utilitaire pour récupérer le cookie côté client
+        function getCartFromCookie() {
+            const name = "ECOM_CART=";
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const ca = decodedCookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i].trim();
+                if (c.indexOf(name) === 0) {
+                    try {
+                        return JSON.parse(c.substring(name.length, c.length));
+                    } catch(e) {
+                        return {};
+                    }
+                }
+            }
+            return {};
+        }
+
 
         function updateCartCount(increment = 1) {
             const cartCountElement = $('.cart-count');

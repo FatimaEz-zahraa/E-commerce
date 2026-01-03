@@ -232,4 +232,160 @@
         updateMinPriceValue(document.getElementById('priceMin').value);
         updateMaxPriceValue(document.getElementById('priceMax').value);
     });
+
+       
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion des boutons "Ajouter au panier"
+        document.querySelectorAll('.btn-add-to-cart').forEach(button => {
+            button.addEventListener('click', async function(e) {
+                e.preventDefault();
+
+                const productId = this.dataset.productId;
+                const productName = this.dataset.productName;
+
+                // Afficher un indicateur de chargement
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ajout...';
+                this.disabled = true;
+
+                try {
+                    // Appeler l'API pour ajouter au panier
+                    const response = await fetch('/api/cart/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            productId: productId,
+                            quantity: 1
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Mettre à jour le badge du panier
+                        await updateCartBadge();
+
+                        // Afficher une notification
+                        showCartNotification(productName, 'success');
+
+                        // Animation du bouton
+                        this.classList.add('btn-success');
+                        setTimeout(() => {
+                            this.classList.remove('btn-success');
+                        }, 1000);
+                    } else {
+                        showCartNotification(result.message || 'Erreur', 'error');
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                    showCartNotification('Erreur de connexion', 'error');
+                } finally {
+                    // Restaurer le bouton
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // Fonction pour mettre à jour le badge du panier
+        async function updateCartBadge() {
+            try {
+                const response = await fetch('/api/cart/count');
+                const result = await response.json();
+
+                if (result.success) {
+                    const badge = document.getElementById('cart-badge');
+                    if (badge) {
+                        badge.textContent = result.count;
+                        badge.style.display = result.count > 0 ? 'inline-block' : 'none';
+
+                        // Animation du badge
+                        badge.classList.add('pulse');
+                        setTimeout(() => {
+                            badge.classList.remove('pulse');
+                        }, 500);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur de mise à jour du panier:', error);
+            }
+        }
+
+        // Fonction pour afficher les notifications
+        function showCartNotification(message, type = 'success') {
+            // Créer ou réutiliser un élément de notification
+            let notification = document.getElementById('cart-notification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'cart-notification';
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    color: white;
+                    z-index: 9999;
+                    display: none;
+                    min-width: 300px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    transition: all 0.3s ease;
+                `;
+                document.body.appendChild(notification);
+            }
+
+            // Configurer selon le type
+            if (type === 'success') {
+                notification.style.backgroundColor = '#28a745';
+                notification.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle" style="font-size: 20px;"></i>
+                        <div>
+                            <strong>Succès !</strong>
+                            <div style="font-size: 14px;">${message}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                notification.style.backgroundColor = '#dc3545';
+                notification.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-exclamation-circle" style="font-size: 20px;"></i>
+                        <div>
+                            <strong>Erreur</strong>
+                            <div style="font-size: 14px;">${message}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Afficher la notification
+            notification.style.display = 'block';
+            notification.style.opacity = '1';
+
+            // Masquer après 3 secondes
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+
+        // CSS pour l'animation du badge
+        const style = document.createElement('style');
+        style.textContent = `
+            @@keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+            .pulse {
+                animation: pulse 0.5s ease;
+            }
+        `;
+        document.head.appendChild(style);
+    });
 </script>

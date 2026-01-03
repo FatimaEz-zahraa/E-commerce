@@ -4,6 +4,7 @@ using E_commerce.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace E_commerce.Pages.Products
 {
@@ -15,8 +16,8 @@ namespace E_commerce.Pages.Products
 
         public ProductDto? Product { get; set; }
 
-        [BindProperty]
-        public int Quantity { get; set; } = 1;
+        // NE PAS utiliser [BindProperty] pour quantity car ça interfère avec le formulaire
+        // public int Quantity { get; set; } = 1; // ENLEVEZ CETTE LIGNE
 
         public DetailsModel(IProductService productService, ICartService cartService)
         {
@@ -24,46 +25,50 @@ namespace E_commerce.Pages.Products
             _cartService = cartService;
         }
 
+        // =========================
+        // AFFICHER LE PRODUIT
+        // =========================
         public async Task<IActionResult> OnGetAsync(Guid id)
         {
+            Console.WriteLine($"DEBUG OnGetAsync: id={id}");
             Product = await _productService.GetByIdAsync(id);
 
             if (Product == null)
             {
+                Console.WriteLine($"DEBUG: Produit non trouvé: {id}");
                 return RedirectToPage("/Products/Index");
             }
 
+            Console.WriteLine($"DEBUG: Produit trouvé: {Product.Name}");
             return Page();
         }
 
+        // =========================
+        // AJOUT AU PANIER
+        // =========================
+        // =========================
+        // AJOUT AU PANIER
+        // =========================
         [AllowAnonymous]
-        public async Task<IActionResult> OnPostAddToCartAsync(Guid id)
+        public async Task<IActionResult> OnPostAddToCartAsync(Guid id, int quantity)
         {
             try
             {
-                // Vérifier que le produit existe
-                Product = await _productService.GetByIdAsync(id);
-                if (Product == null)
-                {
-                    TempData["ErrorMessage"] = "Le produit n'existe pas ou n'est plus disponible.";
-                    return RedirectToPage();
-                }
+                var product = await _productService.GetByIdAsync(id);
+                if (product == null) return NotFound();
 
                 var userId = User.Identity?.IsAuthenticated == true
-                    ? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                    : null;
+                    ? User.FindFirstValue(ClaimTypes.NameIdentifier) : null;
 
-                var cartId = CookieHelper.GetOrCreateCartId(HttpContext);
+                await _cartService.AddToCartAsync(userId, id, quantity);
 
-                await _cartService.AddToCartAsync(userId, cartId, id, Quantity);
-
-                TempData["SuccessMessage"] = $"{Product.Name} ajouté au panier!";
+                TempData["SuccessMessage"] = "Produit ajouté !";
                 return RedirectToPage("/Cart/Index");
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Erreur lors de l'ajout au panier.";
-                return RedirectToPage();
+                TempData["ErrorMessage"] = ex.Message;
+                return RedirectToPage(new { id });
             }
         }
     }

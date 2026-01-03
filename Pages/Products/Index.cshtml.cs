@@ -3,16 +3,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using E_commerce.Services.Interfaces;
 using E_commerce.Models.DTOs;
+using E_commerce.Helpers;
+using E_commerce.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_commerce.Pages.Products
 {
     public class IndexModel : PageModel
     {
         private readonly IProductService _productService;
+        private readonly AppDbContext _context;
 
-        public IndexModel(IProductService productService)
+        public IndexModel(IProductService productService, AppDbContext context)
         {
             _productService = productService;
+            _context = context;
         }
 
         public PaginatedList<ProductDto> Products { get; set; } = new();
@@ -39,13 +44,14 @@ namespace E_commerce.Pages.Products
         public int? MinRating { get; set; }
 
         public int TotalProducts => Products.TotalCount;
-
         public List<string> Categories { get; set; } = new();
         public List<string> Brands { get; set; } = new();
 
+        // =========================
+        // Récupération des produits
+        // =========================
         public async Task OnGetAsync(int pageIndex = 1, int pageSize = 12)
         {
-            // Récupérer les produits paginés via le service
             Products = await _productService.GetPaginatedProductsAsync(
                 pageIndex: pageIndex,
                 pageSize: pageSize,
@@ -56,39 +62,58 @@ namespace E_commerce.Pages.Products
                 searchTerm: SearchTerm
             );
 
-            // Appliquer le tri manuellement si nécessaire
-            if (!string.IsNullOrEmpty(SortBy))
-            {
-                ApplySorting(Products.Items);
-            }
+            ApplySorting(Products.Items);
 
-            // Récupérer les catégories et marques
             Categories = await _productService.GetCategoriesAsync();
             Brands = await _productService.GetBrandsAsync();
-
-            Console.WriteLine($"DEBUG Index - Produits trouvés: {Products.Items.Count}");
-            Console.WriteLine($"DEBUG Index - Rating du premier produit: {Products.Items.FirstOrDefault()?.Rating}");
         }
 
         private void ApplySorting(List<ProductDto> products)
         {
             switch (SortBy)
             {
-                case "price_asc":
-                    products = products.OrderBy(p => p.Price).ToList();
-                    break;
-                case "price_desc":
-                    products = products.OrderByDescending(p => p.Price).ToList();
-                    break;
-                case "rating":
-                    products = products.OrderByDescending(p => p.Rating).ToList();
-                    break;
-                case "popular":
-                    products = products.OrderByDescending(p => p.ReviewCount).ToList();
-                    break;
-                default: // "newest"
-                    products = products.OrderByDescending(p => p.CreatedAt).ToList();
-                    break;
+                case "price_asc": products.Sort((a, b) => a.Price.CompareTo(b.Price)); break;
+                case "price_desc": products.Sort((a, b) => b.Price.CompareTo(a.Price)); break;
+                case "rating": products.Sort((a, b) => b.Rating.CompareTo(a.Rating)); break;
+                case "popular": products.Sort((a, b) => b.ReviewCount.CompareTo(a.ReviewCount)); break;
+                default: products.Sort((a, b) => b.CreatedAt.CompareTo(a.CreatedAt)); break;
+            }
+        }
+
+        // =========================
+        // Ajouter un produit au panier côté cookie
+        // =========================
+        public async Task<IActionResult> OnPostAddToCartAsync(Guid productId, int quantity = 1)
+        {
+            try
+            {
+                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId && p.IsActive);
+                if (product == null || product.StockQuantity <= 0)
+                {
+                    TempData["ErrorMessage"] = "Produit indisponible";
+                    return RedirectToPage();
+                }
+
+                quantity = Math.Min(quantity, product.StockQuantity);
+
+                CookieHelper.AddProductToCart(
+                    HttpContext,
+                    product.Id,
+                    product.Name,
+                    product.Price,
+                    quantity,
+                    product.ImageUrl,
+                    product.Brand,
+                    product.Category
+                );
+
+                TempData["SuccessMessage"] = $"{product.Name} ajouté au panier !";
+                return RedirectToPage();
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Erreur: {ex.Message}";
+                return RedirectToPage();
             }
         }
 

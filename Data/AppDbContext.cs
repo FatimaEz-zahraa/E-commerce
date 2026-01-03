@@ -1,6 +1,7 @@
 ﻿using E_commerce.Models.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace E_commerce.Data
 {
@@ -21,9 +22,48 @@ namespace E_commerce.Data
         public DbSet<UserSearchHistory> UserSearchHistory { get; set; }
         public DbSet<NotificationPreference> NotificationPreferences { get; set; }
 
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Collection avec ValueComparer
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.PreferredBrands)
+                .HasConversion(
+                    v => string.Join(',', v),           // To store as CSV
+                    v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                )
+                .Metadata.SetValueComparer(
+                    new ValueComparer<List<string>>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()
+                    )
+                );
+
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.PreferredCategories)
+                .HasConversion(
+                    v => string.Join(',', v),
+                    v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                )
+                .Metadata.SetValueComparer(
+                    new ValueComparer<List<string>>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()
+                    )
+                );
+
+            // Decimal precision
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.AverageBudget)
+                .HasPrecision(18, 2); // Ajuste selon tes besoins
+
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.TotalAmountSpent)
+                .HasPrecision(18, 2);
 
             // Configuration pour les propriétés de liste en JSON
             builder.Entity<ApplicationUser>()
