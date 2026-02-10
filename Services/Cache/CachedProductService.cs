@@ -1,72 +1,92 @@
-﻿using E_commerce.Models.DTOs;
+﻿using System.Text.Json;
+using E_commerce.Models.DTOs;
 using E_commerce.Services.Interfaces;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace E_commerce.Services.Cache
 {
     public class CachedProductService : IProductService
     {
-        private readonly IProductService _inner; // le ProductService réel
-        private readonly IMemoryCache _cache;
+        private readonly IProductService _inner;
+        private readonly IDistributedCache _cache;
 
-        private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan LongCacheDuration = TimeSpan.FromHours(1);
 
-        public CachedProductService(IProductService inner, IMemoryCache cache)
+        public CachedProductService(
+            IProductService inner,
+            IDistributedCache cache)
         {
             _inner = inner;
             _cache = cache;
         }
 
-        // Clés de cache
-        private string GetAllProductsKey() => "products_all";
-        private string GetProductKey(Guid id) => $"product_{id}";
-        private string GetCategoriesKey() => "product_categories";
-        private string GetBrandsKey() => "product_brands";
-        private string GetRelatedProductsKey(Guid productId, int count) => $"product_related_{productId}_{count}";
+        // =========================
+        // CACHE KEYS
+        // =========================
+        private string GetAllProductsKey() => "products:all";
+        private string GetProductKey(Guid id) => $"products:{id}";
+        private string GetCategoriesKey() => "products:categories";
+        private string GetBrandsKey() => "products:brands";
 
-        // Pour les produits paginés, nous utilisons une clé basée sur les paramètres
-        private string GetPaginatedProductsKey(int pageIndex, int pageSize, string? category, string? brand,
-            decimal? minPrice, decimal? maxPrice, string? searchTerm)
+        private string GetPaginatedKey(
+            int pageIndex, int pageSize,
+            string? category, string? brand,
+            decimal? minPrice, decimal? maxPrice,
+            string? searchTerm)
         {
-            return $"products_paginated_{pageIndex}_{pageSize}_{category}_{brand}_{minPrice}_{maxPrice}_{searchTerm}";
+            return $"products:page:{pageIndex}:{pageSize}:{category}:{brand}:{minPrice}:{maxPrice}:{searchTerm}";
         }
 
+        // =========================
+        // SERIALIZATION HELPERS
+        // =========================
+        private async Task SetAsync<T>(string key, T data, TimeSpan? ttl = null)
+        {
+            var json = JsonSerializer.Serialize(data);
+
+            await _cache.SetStringAsync(key, json,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = ttl ?? DefaultCacheDuration
+                });
+        }
+
+        private async Task<T?> GetAsync<T>(string key)
+        {
+            var json = await _cache.GetStringAsync(key);
+            return json == null ? default : JsonSerializer.Deserialize<T>(json);
+        }
+
+        // =========================
+        // READ METHODS
+        // =========================
         public async Task<List<ProductDto>> GetAllAsync()
         {
             var key = GetAllProductsKey();
-            if (_cache.TryGetValue(key, out List<ProductDto> cached))
-            {
-                return cached;
-            }
+            var cached = await GetAsync<List<ProductDto>>(key);
+            if (cached != null) return cached;
 
             var products = await _inner.GetAllAsync();
-            _cache.Set(key, products, _cacheDuration);
+            await SetAsync(key, products);
             return products;
         }
 
         public async Task<ProductDto?> GetByIdAsync(Guid id)
         {
             var key = GetProductKey(id);
-            if (_cache.TryGetValue(key, out ProductDto cached))
-            {
-                return cached;
-            }
+            var cached = await GetAsync<ProductDto>(key);
+            if (cached != null) return cached;
 
             var product = await _inner.GetByIdAsync(id);
             if (product != null)
-            {
-                _cache.Set(key, product, _cacheDuration);
-            }
+                await SetAsync(key, product);
+
             return product;
         }
 
-        // Ajout de la méthode GetProductByIdAsync
         public async Task<ProductDto?> GetProductByIdAsync(Guid id)
-        {
-            // Cette méthode peut simplement appeler GetByIdAsync
-            // ou être implémentée séparément si nécessaire
-            return await GetByIdAsync(id);
-        }
+            => await GetByIdAsync(id);
 
         public async Task<PaginatedList<ProductDto>> GetPaginatedProductsAsync(
             int pageIndex = 1,
@@ -77,73 +97,67 @@ namespace E_commerce.Services.Cache
             decimal? maxPrice = null,
             string? searchTerm = null)
         {
-            var key = GetPaginatedProductsKey(pageIndex, pageSize, category, brand, minPrice, maxPrice, searchTerm);
+            var key = GetPaginatedKey(pageIndex, pageSize, category, brand, minPrice, maxPrice, searchTerm);
 
-            if (_cache.TryGetValue(key, out PaginatedList<ProductDto> cached))
-            {
-                return cached;
-            }
+            var cached = await GetAsync<PaginatedList<ProductDto>>(key);
+            if (cached != null) return cached;
 
-            var products = await _inner.GetPaginatedProductsAsync(pageIndex, pageSize, category, brand, minPrice, maxPrice, searchTerm);
-            _cache.Set(key, products, _cacheDuration);
+            var products = await _inner.GetPaginatedProductsAsync(
+                pageIndex, pageSize, category, brand, minPrice, maxPrice, searchTerm);
+
+            await SetAsync(key, products);
             return products;
         }
 
         public async Task<List<string>> GetCategoriesAsync()
         {
             var key = GetCategoriesKey();
-            if (_cache.TryGetValue(key, out List<string> cached))
-            {
-                return cached;
-            }
+            var cached = await GetAsync<List<string>>(key);
+            if (cached != null) return cached;
 
             var categories = await _inner.GetCategoriesAsync();
-            _cache.Set(key, categories, TimeSpan.FromHours(1)); // Cache plus long pour catégories
+            await SetAsync(key, categories, LongCacheDuration);
             return categories;
         }
 
         public async Task<List<string>> GetBrandsAsync()
         {
             var key = GetBrandsKey();
-            if (_cache.TryGetValue(key, out List<string> cached))
-            {
-                return cached;
-            }
+            var cached = await GetAsync<List<string>>(key);
+            if (cached != null) return cached;
 
             var brands = await _inner.GetBrandsAsync();
-            _cache.Set(key, brands, TimeSpan.FromHours(1)); // Cache plus long pour marques
+            await SetAsync(key, brands, LongCacheDuration);
             return brands;
         }
 
         public async Task<List<ProductDto>> GetRelatedProductsAsync(Guid productId, int count = 4)
         {
-            var key = GetRelatedProductsKey(productId, count);
-            if (_cache.TryGetValue(key, out List<ProductDto> cached))
-            {
-                return cached;
-            }
+            var key = $"products:related:{productId}:{count}";
+            var cached = await GetAsync<List<ProductDto>>(key);
+            if (cached != null) return cached;
 
-            var relatedProducts = await _inner.GetRelatedProductsAsync(productId, count);
-            if (relatedProducts != null && relatedProducts.Any())
-            {
-                _cache.Set(key, relatedProducts, _cacheDuration);
-            }
-            return relatedProducts;
+            var related = await _inner.GetRelatedProductsAsync(productId, count);
+            if (related.Any())
+                await SetAsync(key, related);
+
+            return related;
         }
 
+        // =========================
+        // WRITE METHODS (INVALIDATE)
+        // =========================
         public async Task<ProductDto> CreateAsync(ProductDto productDto)
         {
             var product = await _inner.CreateAsync(productDto);
-            // Invalider les caches concernés
-            InvalidateCache();
+            await InvalidateAsync(product.Id);
             return product;
         }
 
         public async Task<ProductDto> UpdateAsync(ProductDto productDto)
         {
             var product = await _inner.UpdateAsync(productDto);
-            // Invalider les caches concernés
-            InvalidateCache(productDto.Id);
+            await InvalidateAsync(product.Id);
             return product;
         }
 
@@ -151,60 +165,19 @@ namespace E_commerce.Services.Cache
         {
             var result = await _inner.DeleteAsync(id);
             if (result)
-            {
-                InvalidateCache(id);
-            }
+                await InvalidateAsync(id);
             return result;
         }
 
-        // Méthodes pour invalider le cache
-        private void InvalidateCache(Guid? productId = null)
+        // =========================
+        // CACHE INVALIDATION
+        // =========================
+        private async Task InvalidateAsync(Guid productId)
         {
-            // Invalider la liste complète
-            _cache.Remove(GetAllProductsKey());
-
-            // Invalider les catégories et marques
-            _cache.Remove(GetCategoriesKey());
-            _cache.Remove(GetBrandsKey());
-
-            // Invalider les produits paginés (nous utilisons un cache plus intelligent)
-            ClearPaginatedCache();
-
-            // Invalider le produit spécifique si fourni
-            if (productId.HasValue)
-            {
-                _cache.Remove(GetProductKey(productId.Value));
-                // Invalider aussi les produits liés
-                ClearRelatedProductsCache(productId.Value);
-            }
-        }
-
-        // Pour invalider les caches de pagination
-        private void ClearPaginatedCache()
-        {
-            // Option 1: Invalider tous les caches avec le préfixe "products_paginated"
-            // Ceci est simplifié - dans une vraie app, vous voudriez peut-être une stratégie plus sophistiquée
-            var cacheEntriesCollection = _cache as MemoryCache;
-            if (cacheEntriesCollection != null)
-            {
-                // Cette approche est simplifiée
-                // Dans la pratique, vous voudriez garder une liste des clés de cache
-            }
-        }
-
-        private void ClearRelatedProductsCache(Guid productId)
-        {
-            // Similaire à ClearPaginatedCache, invalider les produits liés
-            // Par exemple, invalider toutes les clés commençant par "product_related_{productId}_"
-            if (_cache is MemoryCache memoryCache)
-            {
-                var keysToRemove = new List<string>();
-                // Dans une vraie application, vous auriez besoin d'une manière de suivre les clés
-                // Ceci est une approche simplifiée
-                var prefix = $"product_related_{productId}_";
-                // Note: MemoryCache n'a pas de méthode publique pour lister les clés
-                // Vous pourriez avoir besoin d'une implémentation différente ou d'un wrapper
-            }
+            await _cache.RemoveAsync(GetAllProductsKey());
+            await _cache.RemoveAsync(GetCategoriesKey());
+            await _cache.RemoveAsync(GetBrandsKey());
+            await _cache.RemoveAsync(GetProductKey(productId));
         }
     }
 }

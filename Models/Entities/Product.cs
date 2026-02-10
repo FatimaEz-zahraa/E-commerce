@@ -1,4 +1,4 @@
-﻿// Dans Product.cs
+﻿// Product.cs
 using E_commerce.Models.Entities;
 
 public class Product

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Text.Json;
 
 namespace E_commerce.Data
 {
@@ -26,6 +27,28 @@ namespace E_commerce.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            var listComparer = new ValueComparer<List<string>>(
+                (c1, c2) => c1.SequenceEqual(c2),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList()
+            );
+
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.PreferredBrands)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null)!
+                )
+                .Metadata.SetValueComparer(listComparer);
+
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.PreferredCategories)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null)!
+                )
+                .Metadata.SetValueComparer(listComparer);
 
             // Collection avec ValueComparer
             builder.Entity<ApplicationUser>()

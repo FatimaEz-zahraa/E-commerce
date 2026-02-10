@@ -17,6 +17,7 @@
 
     <!-- Styles personnalisés -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
     <style>
         :root {
             --primary-color: #6c5ce7;
@@ -115,7 +116,7 @@
             cursor: pointer;
             border-radius: 25px;
             position: fixed;
-            bottom: 30px;
+            bottom: 100px;
             right: 30px;
             opacity: 0;
             visibility: hidden;
@@ -241,13 +242,14 @@
 
         /* Logo */
         .navbar-brand img {
-            height: 80px;
+            height: 55px;
             width: auto;
         }
 
+        /* Responsive */
         @@media (max-width: 768px) {
             .navbar-brand img {
-                height: 60px;
+                height: 45px;
             }
 
             .amazon-search {
@@ -270,6 +272,694 @@
             flex: 1;
         }
     </style>
+
+    <!-- Styles Assistant IA seulement - VERSION AMÉLIORÉE -->
+    <style>
+        /* Variables Assistant - Palette plus professionnelle */
+        :root {
+            --assistant-primary: #5a4bd6;
+            --assistant-secondary: #7c73e6;
+            --assistant-accent: #4a3fbf;
+            --assistant-bg: #ffffff;
+            --assistant-header-bg: linear-gradient(135deg, #5a4bd6, #7c73e6);
+            --assistant-border: #e5e7eb;
+            --assistant-shadow: rgba(90, 75, 214, 0.12);
+            --assistant-text: #1f2937;
+            --assistant-muted: #6b7280;
+            --user-message-bg: #f3f4f6;
+            --ai-message-bg: #f0f7ff;
+            --ai-message-border: #dbeafe;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        /* Bouton flottant - Plus élégant */
+        .ai-assistant-trigger {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            background: var(--assistant-header-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 20px var(--assistant-shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            border: none;
+            border: 2px solid white;
+        }
+
+            .ai-assistant-trigger:hover {
+                transform: scale(1.08) translateY(-2px);
+                box-shadow: 0 10px 25px rgba(90, 75, 214, 0.2);
+            }
+
+            .ai-assistant-trigger.active {
+                background: var(--danger-color);
+                box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2);
+            }
+
+            .ai-assistant-trigger i {
+                font-size: 22px;
+                color: white;
+                transition: transform 0.3s;
+            }
+
+            .ai-assistant-trigger:hover i {
+                transform: rotate(15deg);
+            }
+
+        /* Badge de notification sur le bouton */
+        .ai-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Panneau latéral - Plus mince et professionnel */
+        .ai-assistant-panel {
+            position: fixed;
+            top: 0;
+            right: -380px;
+            width: 380px;
+            height: 100vh;
+            background: var(--assistant-bg);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--assistant-border);
+        }
+
+            .ai-assistant-panel.open {
+                right: 0;
+            }
+
+        /* Header amélioré */
+        .assistant-header {
+            background: var(--assistant-header-bg);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 68px;
+        }
+
+            .assistant-header h3 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                letter-spacing: 0.3px;
+            }
+
+        .assistant-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .assistant-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .assistant-action-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+            .assistant-action-btn:hover {
+                background: rgba(255, 255, 255, 0.25);
+                transform: translateY(-1px);
+            }
+
+            .assistant-action-btn.clear:hover {
+                background: rgba(239, 68, 68, 0.3);
+            }
+
+        /* Zone de chat améliorée */
+        .assistant-chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .chat-message {
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @@keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 14px;
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .user-message .message-bubble {
+            background: var(--user-message-bg);
+            color: var(--assistant-text);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .ai-message .message-bubble {
+            background: var(--ai-message-bg);
+            color: var(--assistant-text);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--ai-message-border);
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--assistant-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .user-message .message-time {
+            text-align: right;
+        }
+
+        .ai-message .message-time {
+            text-align: left;
+        }
+
+        /* Produits recommandés - Style amélioré */
+        .recommended-products {
+            margin-top: 16px;
+            padding: 12px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--assistant-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+            .recommended-products .section-title {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--assistant-primary);
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+        .product-card-mini {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--assistant-border);
+            position: relative;
+            align-items: center;
+        }
+
+            .product-card-mini:hover {
+                transform: translateX(-2px);
+                box-shadow: 0 4px 12px rgba(90, 75, 214, 0.1);
+                border-color: var(--assistant-primary);
+            }
+
+            .product-card-mini img {
+                width: 56px;
+                height: 56px;
+                object-fit: contain;
+                border-radius: 8px;
+                border: 1px solid var(--assistant-border);
+            }
+
+        .product-info-mini {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-name-mini {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--assistant-text);
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+
+        .product-price-mini {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--assistant-primary);
+            margin-bottom: 2px;
+        }
+
+        .product-rating-mini {
+            font-size: 11px;
+            color: var(--warning-color);
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        .product-brand {
+            font-size: 11px;
+            color: var(--assistant-muted);
+            font-weight: 500;
+        }
+
+        .product-external {
+            color: var(--assistant-muted);
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        /* Conteneur scrollable pour les produits */
+        .products-scroll-container {
+            /* Pas de style par défaut, ajouté dynamiquement si nécessaire */
+        }
+
+        .products-scroll-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .products-scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .products-scroll-container::-webkit-scrollbar-thumb {
+            background: var(--assistant-primary);
+            border-radius: 10px;
+        }
+
+        .products-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: var(--assistant-accent);
+        }
+
+        /* Suggestions rapides - Style amélioré */
+        .quick-suggestions {
+            padding: 16px 20px;
+            background: white;
+            border-top: 1px solid var(--assistant-border);
+            border-bottom: 1px solid var(--assistant-border);
+        }
+
+            .quick-suggestions h4 {
+                font-size: 12px;
+                color: var(--assistant-muted);
+                margin-bottom: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-weight: 600;
+            }
+
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-chip {
+            background: #f8fafc;
+            border: 1px solid var(--assistant-border);
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            color: var(--assistant-text);
+        }
+
+            .suggestion-chip:hover {
+                background: var(--assistant-primary);
+                color: white;
+                border-color: var(--assistant-primary);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(90, 75, 214, 0.15);
+            }
+
+        /* Zone de saisie améliorée */
+        .assistant-input-area {
+            padding: 16px 20px;
+            background: white;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            position: relative;
+        }
+
+        .assistant-input {
+            flex: 1;
+            border: 1px solid var(--assistant-border);
+            border-radius: 20px;
+            padding: 12px 16px;
+            font-size: 14px;
+            resize: none;
+            max-height: 120px;
+            transition: all 0.2s;
+            background: #fafafa;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+
+            .assistant-input:focus {
+                outline: none;
+                border-color: var(--assistant-primary);
+                background: white;
+                box-shadow: 0 0 0 3px rgba(90, 75, 214, 0.1);
+            }
+
+            .assistant-input::placeholder {
+                color: var(--assistant-muted);
+                opacity: 0.7;
+            }
+
+        .send-button {
+            background: var(--assistant-primary);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(90, 75, 214, 0.2);
+        }
+
+            .send-button:hover:not(:disabled) {
+                background: var(--assistant-accent);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(90, 75, 214, 0.25);
+            }
+
+            .send-button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+        /* Indicateur de chargement amélioré */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            align-items: center;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--assistant-primary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+            .typing-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+        /* Message d'accueil amélioré */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+            .welcome-message i {
+                font-size: 48px;
+                color: var(--assistant-primary);
+                margin-bottom: 16px;
+                opacity: 0.9;
+            }
+
+            .welcome-message h3 {
+                color: var(--assistant-text);
+                margin-bottom: 8px;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            .welcome-message p {
+                color: var(--assistant-muted);
+                font-size: 14px;
+                line-height: 1.5;
+                max-width: 280px;
+                margin: 0 auto 16px;
+            }
+
+        .welcome-features {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+            text-align: left;
+            max-width: 280px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--assistant-muted);
+        }
+
+            .feature-item i {
+                font-size: 14px;
+                color: var(--success-color);
+            }
+
+        /* Filtre IA dans la page produits */
+        .ai-recommendation-filter {
+            background: linear-gradient(135deg, var(--assistant-primary), var(--assistant-secondary));
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .ai-filter-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .ai-filter-remove {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+            .ai-filter-remove:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: rotate(90deg);
+            }
+
+        /* Badge IA sur les produits */
+        .ai-recommended-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(135deg, var(--assistant-primary), var(--assistant-secondary));
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 1;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 6px rgba(90, 75, 214, 0.2);
+        }
+
+            .ai-recommended-badge:hover {
+                transform: scale(1.05);
+                box-shadow: 0 4px 10px rgba(90, 75, 214, 0.3);
+            }
+
+        /* Animation pour les produits recommandés */
+        @@keyframes highlightProduct {
+            0% {
+                box-shadow: 0 0 0 0 rgba(90, 75, 214, 0.5);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px rgba(90, 75, 214, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(90, 75, 214, 0);
+            }
+        }
+
+        .product-highlight {
+            animation: highlightProduct 1.5s ease-out;
+        }
+
+        /* Message d'information */
+        .info-message {
+            background: #f0f9ff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 16px 0;
+            font-size: 13px;
+            color: var(--assistant-text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .info-message i {
+                color: var(--assistant-primary);
+                font-size: 14px;
+            }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .ai-assistant-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .ai-assistant-trigger {
+                bottom: 20px;
+                right: 20px;
+                width: 52px;
+                height: 52px;
+            }
+
+            .back-to-top {
+                bottom: 90px;
+                right: 20px;
+            }
+        }
+
+        /* Scrollbar personnalisé */
+        .assistant-chat::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .assistant-chat::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .assistant-chat::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+            .assistant-chat::-webkit-scrollbar-thumb:hover {
+                background: #9ca3af;
+            }
+    </style>
 </head>
 <body>
     <!-- Header principal -->
@@ -279,7 +969,7 @@
                 <!-- Logo -->
                 <div class="col-md-2">
                     <a class="navbar-brand" asp-page="/Products/Index">
-                        <img src="~/images/logo.png" alt="E-Shop Logo" />
+                        <img src="~/images/logo.png" alt="E-Shop Logo" onerror="this.innerHTML='<h3 style=\'margin:0\'>E-Shop</h3>'" />
                     </a>
                 </div>
 
@@ -290,7 +980,8 @@
                             <select class="form-select" style="max-width: 150px;" name="category">
                                 <option value="">Toutes catégories</option>
                                 <option value="Électronique">Électronique</option>
-                                <option value="Livres">Livres</option>
+                                <option value="Informatique">Informatique</option>
+                                <option value="Téléphonie">Téléphonie</option>
                                 <option value="Mode">Mode</option>
                                 <option value="Maison">Maison</option>
                             </select>
@@ -330,7 +1021,7 @@
                             <div class="dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-user me-1"></i>
-                                    <span>Bonjour, Identifiez-vous</span>
+                                    <span>Se connecter</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" asp-area="Identity" asp-page="/Account/Login">S'identifier</a></li>
@@ -399,11 +1090,6 @@
         </div>
     </main>
 
-    <!-- Back to top -->
-    <div class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
-        <i class="fas fa-chevron-up me-2"></i>Haut de page
-    </div>
-
     <!-- Footer -->
     <footer class="amazon-footer py-5">
         <div class="container">
@@ -411,25 +1097,25 @@
                 <div class="col-md-3">
                     <h5>Découvrir</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-muted">À propos de nous</a></li>
-                        <li><a href="#" class="text-muted">Carrières</a></li>
-                        <li><a href="#" class="text-muted">Presse</a></li>
+                        <li><a href="#">À propos</a></li>
+                        <li><a href="#">Carrières</a></li>
+                        <li><a href="#">Presse</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
                     <h5>Mon compte</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-muted">Mes commandes</a></li>
-                        <li><a href="#" class="text-muted">Ma liste</a></li>
-                        <li><a href="#" class="text-muted">Mes recommandations</a></li>
+                        <li><a href="#">Mes commandes</a></li>
+                        <li><a href="#">Ma liste</a></li>
+                        <li><a href="#">Recommandations</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
                     <h5>Aide</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-muted">Service Client</a></li>
-                        <li><a href="#" class="text-muted">Guide d'achat</a></li>
-                        <li><a href="#" class="text-muted">Contactez-nous</a></li>
+                        <li><a href="#">Service Client</a></li>
+                        <li><a href="#">Guide d'achat</a></li>
+                        <li><a href="#">Contact</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
@@ -442,10 +1128,106 @@
                 </div>
             </div>
             <div class="text-center mt-4">
-                <p class="text-muted">&copy; 2024 E-Shop. Tous droits réservés.</p>
+                <p class="text-muted">&copy; 2026 Auréon. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
+
+    <!-- Back to top -->
+    <div class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="fas fa-chevron-up me-2"></i>Haut de page
+    </div>
+
+    <!-- Assistant IA - Bouton flottant -->
+    <button class="ai-assistant-trigger" id="aiAssistantTrigger" aria-label="Ouvrir l'assistant IA">
+        <i class="fas fa-robot"></i>
+        <span class="ai-notification-badge" id="notificationBadge" style="display: none;">3</span>
+    </button>
+
+    <!-- Assistant IA - Panneau latéral -->
+    <div class="ai-assistant-panel" id="aiAssistantPanel">
+        <!-- Header amélioré -->
+        <div class="assistant-header">
+            <div>
+                <h3>
+                    <i class="fas fa-sparkles"></i>
+                    Assistant Shopping
+                </h3>
+                <div class="assistant-status">
+                    <span class="status-indicator"></span>
+                    <span>En ligne • Prêt à vous aider</span>
+                </div>
+            </div>
+            <div class="assistant-actions">
+                <button class="assistant-action-btn clear" id="clearChatBtn" title="Vider la conversation">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <button class="assistant-action-btn" id="closeAssistant" title="Fermer l'assistant">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Zone de chat -->
+        <div class="assistant-chat" id="assistantChat">
+            <div class="welcome-message">
+                <i class="fas fa-robot"></i>
+                <h3>Bonjour ! 👋</h3>
+                <p>Je suis votre assistant virtuel E-Shop. Je peux vous aider à trouver les produits parfaits selon vos besoins.</p>
+
+                <div class="welcome-features">
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Recherche intelligente par critères</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Comparaison de produits</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Recommandations personnalisées</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestions rapides -->
+        <div class="quick-suggestions">
+            <h4>Questions fréquentes</h4>
+            <div class="suggestion-chips">
+                <div class="suggestion-chip" onclick="sendAssistantMessage('Quels sont vos meilleurs smartphones ?')">
+                    <span>📱</span>
+                    <span>Smartphones</span>
+                </div>
+                <div class="suggestion-chip" onclick="sendAssistantMessage('Montrez-moi des ordinateurs portables pour étudiant')">
+                    <span>💻</span>
+                    <span>Étudiant</span>
+                </div>
+                <div class="suggestion-chip" onclick="sendAssistantMessage('Produits en promotion cette semaine')">
+                    <span>🔥</span>
+                    <span>Promotions</span>
+                </div>
+                <div class="suggestion-chip" onclick="sendAssistantMessage('Quels écouteurs sans fil recommandez-vous ?')">
+                    <span>🎧</span>
+                    <span>Écouteurs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone de saisie -->
+        <div class="assistant-input-area">
+            <div class="input-wrapper">
+                <textarea class="assistant-input"
+                          id="assistantInput"
+                          placeholder="Posez votre question sur nos produits..."
+                          rows="1"></textarea>
+                <button class="send-button" id="sendButton" onclick="sendAssistantMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -453,97 +1235,641 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
-        // Fonction pour mettre à jour le compteur du panier depuis les cookies
-        function updateCartBadge() {
-            try {
-                // Lire directement le cookie sans appel API
-                const cookieValue = document.cookie
-                    .split('; ')
-                    .find(row => row.startsWith('ECOM_CART='))
-                    ?.split('=')[1];
-
-                if (cookieValue) {
-                    const decoded = decodeURIComponent(cookieValue);
-                    const cartData = JSON.parse(decoded);
-                    const count = cartData?.Items?.reduce((sum, item) => sum + (item.Quantity || 0), 0) || 0;
-
-                    const badge = document.getElementById('cartBadge');
-                    if (badge) {
-                        const currentCount = parseInt(badge.textContent) || 0;
-                        badge.textContent = count;
-
-                        if (count > 0) {
-                            badge.style.display = 'flex';
-                        } else {
-                            badge.style.display = 'none';
-                        }
-
-                        // Animation si le nombre a changé
-                        if (count !== currentCount && count > 0) {
-                            badge.classList.add('pulse');
-                            setTimeout(() => badge.classList.remove('pulse'), 300);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Erreur lecture cookie panier:', error);
-            }
-        }
-
-        // Fonction pour afficher une notification
-        function showNotification(message, type = 'info') {
-            // Supprimer les notifications existantes
-            document.querySelectorAll('.notification').forEach(n => n.remove());
-
-            // Créer une nouvelle notification
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.innerHTML = `
-                <i class="fas ${type === 'success' ? 'fa-check-circle' :
-                                type === 'error' ? 'fa-exclamation-circle' :
-                                'fa-info-circle'} me-2"></i>
-                ${message}
-            `;
-
-            document.body.appendChild(notification);
-
-            // Supprimer après 3 secondes
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(100%)';
-                notification.style.transition = 'opacity 0.3s, transform 0.3s';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        // Fonction pour ajouter au panier (utilisée dans Products/Index)
-        function addToCart(productId, productName) {
-            // Redirige vers la page du produit pour l'ajout
-            window.location.href = `/Products/Details/${productId}?handler=AddToCart&quantity=1`;
-        }
-
-        // Observer les changements de cookies
-        function setupCookieObserver() {
-            let lastCookie = document.cookie;
-
-            setInterval(() => {
-                if (document.cookie !== lastCookie) {
-                    lastCookie = document.cookie;
-                    updateCartBadge();
-                }
-            }, 1000); // Vérifie toutes les secondes
-        }
+        // Variables globales
+        let chatSessionId = '@Guid.NewGuid().ToString()';
+        let isChatProcessing = false;
+        let currentRecommendedProducts = [];
+        let unreadMessages = 0; // Pour suivre les messages non lus
 
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            updateCartBadge();
-            setupCookieObserver();
+            initializeChatAssistant();
+            initializeCartBadge();
+            initializeBackToTop();
+            setupFilters();
+            loadStoredRecommendations();
+            loadChatHistory();
+        });
 
-            // Gestion du scroll pour "Back to top"
+        // 1. Initialisation du chat assistant améliorée
+        function initializeChatAssistant() {
+            const trigger = document.getElementById('aiAssistantTrigger');
+            const panel = document.getElementById('aiAssistantPanel');
+            const closeBtn = document.getElementById('closeAssistant');
+            const clearBtn = document.getElementById('clearChatBtn');
+            const input = document.getElementById('assistantInput');
+            const sendBtn = document.getElementById('sendButton');
+            const chatArea = document.getElementById('assistantChat');
+            const notificationBadge = document.getElementById('notificationBadge');
+
+            // Ouvrir/Fermer le panneau
+            function toggleChatPanel() {
+                const isOpen = panel.classList.contains('open');
+                panel.classList.toggle('open', !isOpen);
+                trigger.classList.toggle('active', !isOpen);
+
+                if (!isOpen) {
+                    input.focus();
+                    // Réinitialiser les notifications quand on ouvre
+                    unreadMessages = 0;
+                    updateNotificationBadge();
+                    // Scroll vers le bas
+                    setTimeout(() => {
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    }, 100);
+                } else {
+                    // Ajouter une notification quand on ferme et qu'il y a de l'activité
+                    if (chatArea.querySelectorAll('.chat-message').length > 0) {
+                        unreadMessages = 1;
+                        updateNotificationBadge();
+                    }
+                }
+            }
+
+            trigger.addEventListener('click', toggleChatPanel);
+            closeBtn.addEventListener('click', toggleChatPanel);
+
+            // Bouton vider la conversation
+            clearBtn.addEventListener('click', function() {
+                if (confirm('Voulez-vous vraiment effacer toute la conversation ? Cette action est irréversible.')) {
+                    clearChatHistory();
+                }
+            });
+
+            // Auto-resize textarea avec limite
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+
+                // Limiter à 500 caractères
+                if (this.value.length > 500) {
+                    this.value = this.value.substring(0, 500);
+                    showNotification('Message limité à 500 caractères', 'warning');
+                }
+            });
+
+            // Envoyer message avec Entrée (Ctrl+Enter pour nouvelle ligne)
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendAssistantMessage();
+                }
+            });
+
+            // Désactiver bouton si input vide
+            input.addEventListener('input', function() {
+                sendBtn.disabled = this.value.trim().length === 0 || isChatProcessing;
+            });
+        }
+
+        // 2. Mettre à jour le badge de notification
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                if (unreadMessages > 0) {
+                    badge.textContent = unreadMessages > 9 ? '9+' : unreadMessages;
+                    badge.style.display = 'flex';
+                    badge.style.animation = 'pulse 1.5s infinite';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        // 3. Envoyer un message à l'assistant
+        async function sendAssistantMessage(message = null) {
+            const input = document.getElementById('assistantInput');
+            const messageText = message || input.value.trim();
+
+            if (!messageText || isChatProcessing) return;
+
+            // Désactiver l'input
+            input.disabled = true;
+            document.getElementById('sendButton').disabled = true;
+            isChatProcessing = true;
+
+            // Ajouter le message utilisateur
+            addChatMessage(messageText, 'user');
+            if (!message) input.value = '';
+            input.style.height = 'auto';
+
+            // Afficher indicateur de chargement
+            showTypingIndicator();
+
+            try {
+                // Appeler l'API RAG
+                const response = await fetch('/api/rag/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: messageText,
+                        sessionId: chatSessionId,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                removeTypingIndicator();
+
+                // Ajouter la réponse (avec messageId si présent)
+                const aiMessageId = data.messageId || null;
+                addChatMessage(data.response || data.message || "Je n'ai pas pu générer de réponse.", 'ai', aiMessageId);
+
+                // Gérer les produits recommandés (attacher au message spécifique)
+                if (data.recommendedProducts && Array.isArray(data.recommendedProducts) && data.recommendedProducts.length > 0) {
+                    currentRecommendedProducts = data.recommendedProducts;
+                    displayRecommendedProductsInChat(data.recommendedProducts, aiMessageId);
+                    displayRecommendedProductsInPage(data.recommendedProducts, messageText);
+                }
+
+                // Sauvegarder l'historique avec les produits (inclut messageId)
+                saveChatToLocalStorage({
+                    user: messageText,
+                    ai: data.response,
+                    messageId: aiMessageId,
+                    products: data.recommendedProducts || [],
+                    timestamp: new Date().toISOString()
+                });
+
+            } catch (error) {
+                console.error('Erreur assistant:', error);
+                removeTypingIndicator();
+                addChatMessage('Désolé, une erreur est survenue. Veuillez réessayer.', 'ai');
+
+                // Sauvegarder quand même l'erreur
+                saveChatToLocalStorage({
+                    user: messageText,
+                    ai: 'Désolé, une erreur est survenue. Veuillez réessayer.',
+                    products: [],
+                    timestamp: new Date().toISOString()
+                });
+            } finally {
+                // Réactiver l'input
+                input.disabled = false;
+                document.getElementById('sendButton').disabled = input.value.trim().length === 0;
+                isChatProcessing = false;
+                input.focus();
+            }
+        }
+
+        // 4. Ajouter un message au chat avec style amélioré
+        function addChatMessage(text, sender, messageId) {
+            const chatArea = document.getElementById('assistantChat');
+
+            // Supprimer le message de bienvenue seulement si c'est le premier message réel
+            const welcomeMsg = chatArea.querySelector('.welcome-message');
+            const existingMessages = chatArea.querySelectorAll('.chat-message').length;
+
+            if (welcomeMsg && existingMessages === 0) {
+                welcomeMsg.remove();
+
+                // Ajouter un message d'information
+                const infoMsg = document.createElement('div');
+                infoMsg.className = 'info-message fade-in';
+                infoMsg.innerHTML = `
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        <strong>Astuce :</strong> Cliquez sur les produits pour voir leurs détails.
+                        Vous pouvez aussi faire un clic droit pour ouvrir dans un nouvel onglet.
+                    </div>
+                `;
+                chatArea.appendChild(infoMsg);
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            if (messageId) {
+                messageDiv.dataset.messageId = messageId;
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = formatTime(new Date());
+
+            messageDiv.appendChild(bubble);
+            messageDiv.appendChild(time);
+            chatArea.appendChild(messageDiv);
+
+            // Scroll vers le bas
+            setTimeout(() => {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 50);
+        }
+
+        // 5. Afficher les produits recommandés dans le chat avec style amélioré
+        function displayRecommendedProductsInChat(products, messageId) {
+            const chatArea = document.getElementById('assistantChat');
+
+            // Si un messageId est fourni, rattacher les cartes à ce message précis
+            let targetMessage = null;
+            if (messageId) {
+                targetMessage = chatArea.querySelector(`.chat-message.ai-message[data-message-id="${messageId}"]`);
+            }
+
+            // Sinon, fallback sur le dernier message IA
+            if (!targetMessage) {
+                const aiMessages = Array.from(chatArea.querySelectorAll('.ai-message'));
+                targetMessage = aiMessages[aiMessages.length - 1];
+            }
+
+            if (!targetMessage) return;
+
+            // Créer la section produits
+            const productsSection = document.createElement('div');
+            productsSection.className = 'recommended-products fade-in';
+
+            const title = document.createElement('div');
+            title.className = 'section-title';
+            title.innerHTML = '<i class="fas fa-star"></i> Recommandations';
+            productsSection.appendChild(title);
+
+            // Conteneur scrollable pour les produits
+            const productsContainer = document.createElement('div');
+            productsContainer.className = 'products-scroll-container';
+            // Style inline pour le scroll si plus de 6 produits
+            if (products.length > 6) {
+                productsContainer.style.maxHeight = '400px';
+                productsContainer.style.overflowY = 'auto';
+                productsContainer.style.overflowX = 'hidden';
+                productsContainer.style.paddingRight = '4px';
+            }
+
+            // Ajouter jusqu'à 10 produits (au lieu de 3)
+            products.slice(0, 10).forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card-mini';
+                productCard.dataset.productId = product.id;
+                productCard.style.cursor = 'pointer';
+
+                // Gestionnaire de clic
+                productCard.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const pid = this.dataset.productId;
+                    if (pid) {
+                        navigateToProductDetail(pid);
+                    }
+                });
+
+                // Gestionnaire pour clic droit (nouvel onglet)
+                productCard.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    const pid = this.dataset.productId;
+                    if (pid) {
+                        openProductInNewTab(pid);
+                    }
+                    return false;
+                });
+
+                productCard.innerHTML = `
+                    <img src="${product.imageUrl || '/images/placeholder.jpg'}"
+                         alt="${product.name}"
+                         onerror="this.src='/images/placeholder.jpg'">
+                    <div class="product-info-mini">
+                        <div class="product-name-mini">${product.name}</div>
+                        <div class="product-meta">
+                            <div class="product-price-mini">${formatPrice(product.price)}</div>
+                            ${product.rating ?
+                                `<div class="product-rating-mini">${generateStarRating(product.rating)}</div>` :
+                                ''
+                            }
+                        </div>
+                        ${product.brand ? `<div class="product-brand">${product.brand}</div>` : ''}
+                    </div>
+                    <div class="product-external">
+                        <i class="fas fa-external-link-alt"></i>
+                    </div>
+                `;
+
+                // Effet au survol
+                productCard.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(-2px)';
+                    this.style.boxShadow = '0 4px 12px rgba(90, 75, 214, 0.1)';
+                });
+
+                productCard.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                    this.style.boxShadow = 'none';
+                });
+
+                productsContainer.appendChild(productCard);
+            });
+
+            productsSection.appendChild(productsContainer);
+
+            // Bouton "Voir tous" seulement s'il y a plus de 10 produits
+            if (products.length > 10) {
+                const viewAllBtn = document.createElement('button');
+                viewAllBtn.className = 'btn btn-sm btn-outline-primary w-100 mt-2';
+                viewAllBtn.style.fontSize = '12px';
+                viewAllBtn.style.padding = '6px 12px';
+                viewAllBtn.innerHTML = `<i class="fas fa-eye me-1"></i> Voir tous les ${products.length} produits`;
+                viewAllBtn.onclick = function() {
+                    // Stocker les produits globalement
+                    currentRecommendedProducts = products;
+                    // Afficher dans la page
+                    displayRecommendedProductsInPage(products, 'recommandations');
+                    // Fermer le chat si mobile
+                    if (window.innerWidth <= 768) {
+                        closeChatPanel();
+                    }
+                };
+                productsSection.appendChild(viewAllBtn);
+            }
+
+            targetMessage.appendChild(productsSection);
+
+            // Scroll vers le bas
+            setTimeout(() => {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 100);
+        }
+
+        // 6. Afficher les produits recommandés dans la page
+        function displayRecommendedProductsInPage(products, query) {
+            // Vérifier si on est sur la page des produits
+            if (!isProductsPage()) {
+                // Rediriger vers la page produits avec les filtres
+                sessionStorage.setItem('aiRecommendedProducts', JSON.stringify(products));
+                sessionStorage.setItem('aiRecommendationQuery', query);
+                window.location.href = '/Products/Index?aiRecommendation=true';
+                return;
+            }
+
+            // Supprimer les filtres IA existants
+            removeExistingAIFilter();
+
+            // Ajouter le filtre IA
+            const filtersContainer = document.querySelector('.filters-container, .filter-section, .card-body, .row:first-child');
+            if (filtersContainer) {
+                const aiFilter = document.createElement('div');
+                aiFilter.className = 'ai-recommendation-filter fade-in';
+                aiFilter.innerHTML = `
+                    <div class="ai-filter-label">
+                        <i class="fas fa-robot"></i>
+                        <span>Recommandations IA pour "${truncateText(query, 40)}"</span>
+                        <span class="badge bg-light text-dark ms-2">${products.length} produits</span>
+                    </div>
+                    <button class="ai-filter-remove" onclick="removeAIFilter()" title="Supprimer le filtre">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                filtersContainer.prepend(aiFilter);
+            }
+
+            // Filtrer les produits
+            filterProductsByRecommendations(products.map(p => p.id));
+
+            // Ajouter les écouteurs d'événements aux produits
+            setTimeout(() => {
+                attachProductClickListeners(products);
+            }, 100);
+        }
+
+        // 7. Filtrer les produits par recommandations
+        function filterProductsByRecommendations(productIds) {
+            const productElements = document.querySelectorAll('.product-card, .product-item, [data-product-id]');
+
+            productElements.forEach(element => {
+                const productId = element.dataset.productId ||
+                                 element.querySelector('[data-product-id]')?.dataset.productId;
+
+                if (productId && productIds.includes(productId)) {
+                    element.style.display = 'block';
+                    element.style.border = '2px solid #5a4bd6';
+                    element.style.borderRadius = '8px';
+                    element.classList.add('product-highlight');
+
+                    // Ajouter un badge cliquable
+                    if (!element.querySelector('.ai-recommended-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'ai-recommended-badge';
+                        badge.innerHTML = '<i class="fas fa-robot me-1"></i> IA Recommandé';
+                        badge.onclick = function(e) {
+                            e.stopPropagation();
+                            navigateToProductDetail(productId);
+                        };
+                        element.style.position = 'relative';
+                        element.appendChild(badge);
+                    }
+                } else {
+                    element.style.display = 'none';
+                }
+            });
+
+            // Mettre à jour le compteur
+            updateProductCount(productIds.length);
+        }
+
+        // 8. Attacher les écouteurs de clic aux produits
+        function attachProductClickListeners(products) {
+            const productElements = document.querySelectorAll('.product-card, .product-item, [data-product-id]');
+
+            productElements.forEach(element => {
+                const productId = element.dataset.productId ||
+                                 element.querySelector('[data-product-id]')?.dataset.productId;
+
+                if (productId) {
+                    // Trouver le produit correspondant
+                    const product = products.find(p => p.id === productId);
+                    if (product) {
+                        element.style.cursor = 'pointer';
+
+                        element.addEventListener('click', function(e) {
+                            if (!e.target.closest('.btn') && !e.target.closest('.ai-recommended-badge')) {
+                                navigateToProductDetail(productId);
+                            }
+                        });
+
+                        // Ajouter un tooltip
+                        element.title = `Cliquez pour voir les détails de ${product.name}`;
+                    }
+                }
+            });
+        }
+
+        // 9. Supprimer le filtre IA
+        function removeAIFilter() {
+            // Supprimer le badge de filtre
+            const aiFilter = document.querySelector('.ai-recommendation-filter');
+            if (aiFilter) aiFilter.remove();
+
+            // Réafficher tous les produits
+            const productElements = document.querySelectorAll('.product-card, .product-item, [data-product-id]');
+            productElements.forEach(element => {
+                element.style.display = 'block';
+                element.style.border = '';
+                element.classList.remove('product-highlight');
+
+                // Supprimer les badges IA
+                const badge = element.querySelector('.ai-recommended-badge');
+                if (badge) badge.remove();
+
+                // Réinitialiser le curseur
+                element.style.cursor = '';
+                element.title = '';
+            });
+
+            // Réinitialiser le compteur
+            const allProducts = document.querySelectorAll('.product-card, .product-item, [data-product-id]');
+            updateProductCount(allProducts.length);
+        }
+
+        // 10. Fonctions utilitaires
+        function showTypingIndicator() {
+            const chatArea = document.getElementById('assistantChat');
+            const indicator = document.createElement('div');
+            indicator.className = 'chat-message ai-message typing-indicator-message';
+            indicator.innerHTML = `
+                <div class="message-bubble">
+                    <div class="typing-indicator">
+                        <span style="margin-right: 8px; color: var(--assistant-muted); font-size: 12px;">En train d'écrire...</span>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            indicator.id = 'typingIndicator';
+            chatArea.appendChild(indicator);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        function updateProductCount(count) {
+            const countElement = document.querySelector('.product-count, .results-count');
+            if (countElement) {
+                countElement.textContent = `${count} produits`;
+            }
+        }
+
+        function closeChatPanel() {
+            const panel = document.getElementById('aiAssistantPanel');
+            const trigger = document.getElementById('aiAssistantTrigger');
+            if (panel) panel.classList.remove('open');
+            if (trigger) trigger.classList.remove('active');
+        }
+
+        function removeExistingAIFilter() {
+            const existingFilter = document.querySelector('.ai-recommendation-filter');
+            if (existingFilter) existingFilter.remove();
+        }
+
+        // 11. Navigation produit
+        function navigateToProductDetail(productId) {
+            if (!productId) {
+                console.error('Product ID is missing');
+                return;
+            }
+
+            // Construction de l'URL selon votre routage
+            const productUrl = `/Products/Details/${productId}`;
+
+            // Fermer le panneau assistant sur mobile
+            if (window.innerWidth <= 768) {
+                closeChatPanel();
+            }
+
+            // Redirection vers la page produit
+            window.location.href = productUrl;
+        }
+
+        function openProductInNewTab(productId) {
+            if (!productId) return;
+            const productUrl = `/Products/Details/${productId}`;
+            window.open(productUrl, '_blank');
+        }
+
+        // 12. Fonctions de formatage
+        function formatPrice(price) {
+            if (typeof price === 'number') {
+                return price.toFixed(2).replace('.', ',') + ' €';
+            }
+            return '0,00 €';
+        }
+
+        function generateStarRating(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            let stars = '★'.repeat(fullStars);
+            if (hasHalfStar) stars += '½';
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            stars += '☆'.repeat(emptyStars);
+            return stars + ' ' + rating.toFixed(1);
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function isProductsPage() {
+            return window.location.pathname.includes('/Products/Index');
+        }
+
+        // 13. Notification système
+        function showNotification(message, type = 'info') {
+            // Vous pouvez implémenter un système de notifications si besoin
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // 14. Gestion du panier
+        function initializeCartBadge() {
+            function updateCartBadge() {
+                try {
+                    const cookieValue = document.cookie
+                        .split('; ')
+                        .find(row => row.startsWith('ECOM_CART='))
+                        ?.split('=')[1];
+
+                    if (cookieValue) {
+                        const decoded = decodeURIComponent(cookieValue);
+                        const cartData = JSON.parse(decoded);
+                        const count = cartData?.Items?.reduce((sum, item) => sum + (item.Quantity || 0), 0) || 0;
+
+                        const badge = document.getElementById('cartBadge');
+                        if (badge) {
+                            badge.textContent = count;
+                            badge.style.display = count > 0 ? 'flex' : 'none';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erreur lecture cookie panier:', error);
+                }
+            }
+
+            // Vérifier périodiquement
+            setInterval(updateCartBadge, 1000);
+            updateCartBadge();
+        }
+
+        // 15. Back to top
+        function initializeBackToTop() {
             const backToTop = document.querySelector('.back-to-top');
             if (backToTop) {
-                backToTop.style.transition = 'opacity 0.3s, visibility 0.3s';
-
                 window.addEventListener('scroll', function() {
                     if (window.scrollY > 300) {
                         backToTop.style.opacity = '1';
@@ -554,25 +1880,16 @@
                     }
                 });
             }
+        }
 
-            // Pré-remplir le sélecteur de catégorie
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentCategory = urlParams.get('category');
-            if (currentCategory) {
-                const categorySelect = document.querySelector('select[name="category"]');
-                if (categorySelect) {
-                    categorySelect.value = currentCategory;
-                }
+        // 16. Gestion des filtres existants
+        function setupFilters() {
+            const searchForm = document.querySelector('form[asp-page="/Products/Index"]');
+            if (searchForm) {
+                searchForm.addEventListener('submit', handleSearch);
             }
+        }
 
-            // Animation d'entrée
-            const mainContent = document.querySelector('main .container');
-            if (mainContent) {
-                mainContent.classList.add('fade-in');
-            }
-        });
-
-        // Fonction pour gérer la recherche
         function handleSearch(event) {
             event.preventDefault();
             const form = event.target;
@@ -592,13 +1909,134 @@
             window.location.href = url;
         }
 
-        // Attacher l'événement au formulaire de recherche
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchForm = document.querySelector('form[asp-page="/Products/Index"]');
-            if (searchForm) {
-                searchForm.addEventListener('submit', handleSearch);
+        // 17. Charger les recommandations stockées
+        function loadStoredRecommendations() {
+            if (isProductsPage() && window.location.search.includes('aiRecommendation=true')) {
+                const storedProducts = sessionStorage.getItem('aiRecommendedProducts');
+                const storedQuery = sessionStorage.getItem('aiRecommendationQuery');
+
+                if (storedProducts && storedQuery) {
+                    const products = JSON.parse(storedProducts);
+                    displayRecommendedProductsInPage(products, storedQuery);
+
+                    // Nettoyer le sessionStorage
+                    sessionStorage.removeItem('aiRecommendedProducts');
+                    sessionStorage.removeItem('aiRecommendationQuery');
+                }
             }
-        });
+        }
+
+        // 18. Stockage local du chat
+        function saveChatToLocalStorage(message) {
+            try {
+                const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+                history.push(message);
+
+                // Garder seulement les 100 derniers messages
+                if (history.length > 100) {
+                    history.splice(0, history.length - 100);
+                }
+
+                localStorage.setItem('chatHistory', JSON.stringify(history));
+            } catch (error) {
+                console.error('Erreur sauvegarde historique:', error);
+            }
+        }
+
+        function loadChatHistory() {
+            try {
+                const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+                const chatArea = document.getElementById('assistantChat');
+
+                // Ne charger l'historique que si le chat est vide (pas de messages)
+                const existingMessages = chatArea.querySelectorAll('.chat-message').length;
+
+                if (existingMessages === 0 && history.length > 0) {
+                    // Vider seulement le message de bienvenue
+                    const welcomeMsg = chatArea.querySelector('.welcome-message');
+                    if (welcomeMsg) welcomeMsg.remove();
+
+                    // Ajouter un message d'information
+                    const infoMsg = document.createElement('div');
+                    infoMsg.className = 'info-message fade-in';
+                    infoMsg.innerHTML = `
+                        <i class="fas fa-history"></i>
+                        <div>
+                            <strong>Conversation précédente restaurée</strong><br>
+                            Vous pouvez continuer là où vous vous étiez arrêté.
+                        </div>
+                    `;
+                    chatArea.appendChild(infoMsg);
+
+                    // Charger tout l'historique
+                    history.forEach(msg => {
+                        if (msg.user) addChatMessage(msg.user, 'user');
+                        if (msg.ai) {
+                            // Rétablir le message IA avec son messageId s'il existe
+                            addChatMessage(msg.ai, 'ai', msg.messageId || null);
+
+                            // Reconstruire les produits recommandés après un délai
+                            if (msg.products && Array.isArray(msg.products) && msg.products.length > 0) {
+                                setTimeout(() => {
+                                    displayRecommendedProductsInChat(msg.products, msg.messageId || null);
+                                }, 100);
+                            }
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error('Erreur chargement historique:', error);
+            }
+        }
+
+        // 19. Fonction pour vider le chat
+        function clearChatHistory() {
+            localStorage.removeItem('chatHistory');
+            const chatArea = document.getElementById('assistantChat');
+            chatArea.innerHTML = '';
+
+            // Réafficher le message de bienvenue
+            const welcomeMsg = document.createElement('div');
+            welcomeMsg.className = 'welcome-message';
+            welcomeMsg.innerHTML = `
+                <i class="fas fa-robot"></i>
+                <h3>Bonjour ! 👋</h3>
+                <p>Je suis votre assistant virtuel E-Shop. Je peux vous aider à trouver les produits parfaits selon vos besoins.</p>
+
+                <div class="welcome-features">
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Recherche intelligente par critères</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Comparaison de produits</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Recommandations personnalisées</span>
+                    </div>
+                </div>
+            `;
+            chatArea.appendChild(welcomeMsg);
+
+            // Supprimer le filtre IA s'il existe
+            removeAIFilter();
+
+            // Notification de confirmation
+            showNotification('Conversation effacée avec succès', 'success');
+
+            // Scroll vers le haut
+            chatArea.scrollTop = 0;
+        }
+
+        // Exposer les fonctions globalement
+        window.sendAssistantMessage = sendAssistantMessage;
+        window.removeAIFilter = removeAIFilter;
+        window.navigateToProductDetail = navigateToProductDetail;
+        window.openProductInNewTab = openProductInNewTab;
+        window.clearChatHistory = clearChatHistory;
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

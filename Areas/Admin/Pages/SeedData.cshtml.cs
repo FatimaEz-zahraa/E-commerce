@@ -39,7 +39,7 @@ namespace E_commerce.Areas.Admin.Pages
         {
             try
             {
-                await _dataSeederService.SeedAsync(UserCount, ProductsPerCategory, MaxReviewsPerProduct);
+                await _dataSeederService.SeedAsync(true, UserCount, ProductsPerCategory, MaxReviewsPerProduct);
 
                 Message = $"Données générées avec succès: {UserCount} utilisateurs, {ProductsPerCategory} produits/catégorie";
                 IsSuccess = true;

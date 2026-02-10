@@ -379,4 +379,27 @@ public class ProductService : IProductService
             PageSize = pageSize
         };
     }
+
+    // Dans ProductService.cs, ajoutez cette méthode
+    public async Task<List<ProductDto>> SearchProductsForChatAsync(string query, int limit = 5)
+    {
+        try
+        {
+            var products = await _context.Products
+                .Where(p => p.IsActive &&
+                           (p.Name.Contains(query) ||
+                            p.Description.Contains(query) ||
+                            p.Category.Contains(query) ||
+                            p.Brand.Contains(query)))
+                .OrderByDescending(p => p.Rating)
+                .Take(limit)
+                .ToListAsync();
+
+            return _mapper.Map<List<ProductDto>>(products);
+        }
+        catch
+        {
+            return new List<ProductDto>();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using E_commerce.Data;
 using E_commerce.Models.Entities;
 using E_commerce.Models.Mapping;
@@ -7,24 +7,25 @@ using E_commerce.Services.Cache;
 using E_commerce.Services.External;
 using E_commerce.Services.Implementations;
 using E_commerce.Services.Interfaces;
+using E_commerce.Services.Rag;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using System.Security.Claims;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // =======================================
-// CONFIGURATION DES COOKIES ET SESSION
+// COOKIES & SESSION
 // =======================================
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
-    options.CheckConsentNeeded = context => false;
-    options.MinimumSameSitePolicy = SameSiteMode.None;
+    options.CheckConsentNeeded = _ => false;
+    options.MinimumSameSitePolicy = SameSiteMode.Lax;
     options.Secure = CookieSecurePolicy.SameAsRequest;
 });
 
@@ -46,10 +47,71 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // =======================================
-// CACHE & HTTP CONTEXT
+// REDIS CACHE
 // =======================================
-builder.Services.AddMemoryCache();
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "ECommerce:";
+});
+
+// =======================================
+// SERVICES
+// =======================================
+builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
+
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<DataSeederService>();
+
+// Product Service + Cache Redis
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.Decorate<IProductService, CachedProductService>();
+
 builder.Services.AddHttpContextAccessor();
+
+// =======================================
+// SERVICES GEMINI - CONFIGURATION CORRECTE
+// =======================================
+
+// Configuration Gemini
+builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
+
+// HttpClient pour Gemini
+builder.Services.AddHttpClient("Gemini", client =>
+{
+    client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "ECommerce-App/1.0");
+});
+
+// Vérification et enregistrement du service Gemini
+var geminiApiKey = builder.Configuration["Gemini:ApiKey"];
+var isGeminiEnabled = builder.Configuration.GetValue<bool>("Gemini:Enabled", true);
+
+if (!string.IsNullOrEmpty(geminiApiKey) && isGeminiEnabled)
+{
+    builder.Services.AddSingleton<E_commerce.Services.GeminiService>(); // Singleton pour permettre l'utilisation par VectorProductIndexService
+    Console.WriteLine("✅ Gemini Service activé");
+}
+else
+{
+    builder.Services.AddScoped<FallbackAssistantService>();
+    Console.WriteLine("⚠️ Gemini Service désactivé - Fallback activé");
+}
+
+// Services RAG
+builder.Services.AddScoped<ProductKnowledgeService>();
+builder.Services.AddSingleton<VectorProductIndexService>(); // Singleton pour garder l'index en mémoire
+builder.Services.AddScoped<IRagService, RagService>();
+
+// =======================================
+// IMAGES EXTERNES
+// =======================================
+builder.Services.AddHttpClient<ImageSearchService>();
+builder.Services.AddHttpClient<ImageService>();
+builder.Services.AddScoped<ProductImageUpdateService>();
 
 // =======================================
 // IDENTITY
@@ -60,52 +122,31 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireUppercase = false;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequiredLength = 6;
-    options.SignIn.RequireConfirmedAccount = false;
+
     options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedAccount = false;
     options.SignIn.RequireConfirmedEmail = false;
+
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// =======================================
-// CONFIGURATION DES COOKIES D'AUTHENTIFICATION
-// =======================================
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = ".Ecommerce.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    options.ExpireTimeSpan = TimeSpan.FromDays(30);
-    options.SlidingExpiration = true;
+
     options.LoginPath = "/Identity/Account/Login";
     options.LogoutPath = "/Identity/Account/Logout";
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.SlidingExpiration = true;
 });
-
-// =======================================
-// SERVICES
-// =======================================
-builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
-builder.Services.AddScoped<IReviewService, ReviewService>();
-builder.Services.AddScoped<ICartService, CartService>();
-
-// Product Service avec cache
-builder.Services.AddScoped<ProductService>();
-builder.Services.AddScoped<IProductService>(provider =>
-{
-    var inner = provider.GetRequiredService<ProductService>();
-    var cache = provider.GetRequiredService<IMemoryCache>();
-    return new CachedProductService(inner, cache);
-});
-
-// IMAGES EXTERNES
-builder.Services.AddHttpClient<ImageSearchService>();
-builder.Services.AddScoped<ProductImageUpdateService>();
-builder.Services.AddHttpClient<ImageService>();
 
 // =======================================
 // EMAIL
@@ -120,71 +161,29 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToPage("/Cart/Index");
     options.Conventions.AllowAnonymousToPage("/Products/Index");
     options.Conventions.AllowAnonymousToPage("/Products/Details");
-    options.Conventions.AllowAnonymousToPage("/TestCart");
-    options.Conventions.AllowAnonymousToPage("/TestForm");
     options.Conventions.AuthorizeFolder("/Admin");
-})
-.AddRazorPagesOptions(options =>
-{
-    options.Conventions.AddPageRoute("/Cart/Index", "Cart/Index/{handler?}");
 });
 
-// =======================================
-// CONTROLLERS POUR API
-// =======================================
 builder.Services.AddControllers();
 
 // =======================================
-// CORS POUR LE DÉVELOPPEMENT
+// CORS (DEV)
 // =======================================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalhost", policy =>
     {
         policy.WithOrigins("https://localhost:7058", "http://localhost:5066")
-              .AllowAnyMethod()
               .AllowAnyHeader()
+              .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
 // =======================================
-// BUILD DE L'APPLICATION
+// BUILD
 // =======================================
 var app = builder.Build();
-
-// =======================================
-// MIDDLEWARE POUR LOGS DU PANIER
-// =======================================
-app.Use(async (context, next) =>
-{
-    if (context.Request.Cookies.TryGetValue("ECOM_CART", out var cartCookie))
-    {
-        Console.WriteLine($"=== COOKIE PANIER DÉTECTÉ ===");
-        Console.WriteLine($"URL: {context.Request.Path}");
-        Console.WriteLine($"Method: {context.Request.Method}");
-        Console.WriteLine($"Cookie taille: {cartCookie.Length} chars");
-
-        if (cartCookie.Length < 1000)
-        {
-            Console.WriteLine($"Contenu: {cartCookie}");
-        }
-    }
-
-    if (context.Request.Path.StartsWithSegments("/Cart/Index") &&
-        context.Request.Method == "POST")
-    {
-        Console.WriteLine($"=== POST VERS CART ===");
-        Console.WriteLine($"Query String: {context.Request.QueryString}");
-
-        context.Request.EnableBuffering();
-        var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-        context.Request.Body.Position = 0;
-        Console.WriteLine($"Body: {body}");
-    }
-
-    await next();
-});
 
 // =======================================
 // MIDDLEWARE PIPELINE
@@ -204,178 +203,95 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// IMPORTANT: Ordre correct
 app.UseCookiePolicy();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseSession();
 
 app.MapRazorPages();
-app.MapControllers();
+// Redirection de l'URL racine vers Products/Index
+app.MapGet("/", () => Results.Redirect("/Products/Index"));
+app.MapGet("/Index", () => Results.Redirect("/Products/Index"));
+app.MapControllers(); // CEci mappe tous les contrôleurs API
 
 // =======================================
-// ENDPOINTS DE DEBUG
+// API CART (Endpoint minimal)
 // =======================================
-
-// Test API pour ajouter au panier
-app.MapPost("/api/cart/add", async (HttpContext context, [FromServices] ICartService cartService) =>
+app.MapPost("/api/cart/add", async (
+    HttpContext context,
+    [FromServices] ICartService cartService) =>
 {
-    try
-    {
-        Console.WriteLine("=== API CART ADD ===");
+    var data = await JsonSerializer.DeserializeAsync<CartAddRequest>(context.Request.Body);
 
-        // Lire le body
-        using var reader = new StreamReader(context.Request.Body);
-        var body = await reader.ReadToEndAsync();
-        Console.WriteLine($"Body: {body}");
+    if (data == null)
+        return Results.BadRequest("Invalid data");
 
-        // Parser JSON
-        var data = JsonSerializer.Deserialize<CartAddRequest>(body);
+    var userId = context.User.Identity?.IsAuthenticated == true
+        ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+        : null;
 
-        if (data == null)
-            return Results.BadRequest("Données invalides");
+    await cartService.AddToCartAsync(userId, data.ProductId, data.Quantity);
 
-        // Récupérer userId
-        var userId = context.User.Identity?.IsAuthenticated == true
-            ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            : null;
-
-        Console.WriteLine($"API - UserId: {userId ?? "Guest"}, ProductId: {data.ProductId}, Quantity: {data.Quantity}");
-
-        // Ajouter au panier
-        await cartService.AddToCartAsync(userId, data.ProductId, data.Quantity);
-
-        return Results.Ok(new
-        {
-            success = true,
-            message = "Produit ajouté au panier",
-            productId = data.ProductId
-        });
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"API Cart Add Error: {ex.Message}");
-        return Results.Problem(ex.Message);
-    }
+    return Results.Ok(new { success = true });
 });
 
-// Routes disponibles
-app.MapGet("/debug/routes", () =>
-{
-    var routes = new List<string>();
 
-    routes.Add("=== PAGES DISPONIBLES ===");
-    routes.Add("GET  /Products/Index");
-    routes.Add("GET  /Products/Details/{id}");
-    routes.Add("POST /Products/Details/{id}?handler=AddToCart");
-    routes.Add("GET  /Cart/Index");
-    routes.Add("POST /Cart/Index?handler=AddItem");
-    routes.Add("GET  /TestCart");
-    routes.Add("GET  /TestForm");
-    routes.Add("");
-    routes.Add("=== API ENDPOINTS ===");
-    routes.Add("POST /api/cart/add");
-    routes.Add("GET  /debug/routes");
-    routes.Add("GET  /debug/cookie");
-
-    return string.Join("\n", routes);
-});
-
-// Debug cookie
-app.MapGet("/debug/cookie", (HttpContext context) =>
-{
-    var result = new
-    {
-        HasCookie = context.Request.Cookies.ContainsKey("ECOM_CART"),
-        CookieValue = context.Request.Cookies["ECOM_CART"],
-        CookieLength = context.Request.Cookies["ECOM_CART"]?.Length ?? 0,
-        AllCookies = context.Request.Cookies.Keys.ToList()
-    };
-
-    return Results.Json(result);
-});
-
-// Test simple POST
-app.MapPost("/test/post", (HttpContext context) =>
-{
-    Console.WriteLine("=== TEST POST RECEIVED ===");
-    Console.WriteLine($"Headers: {string.Join(", ", context.Request.Headers.Keys)}");
-
-    return Results.Ok(new
-    {
-        success = true,
-        message = "POST reçu avec succès",
-        timestamp = DateTime.UtcNow
-    });
-});
 
 // =======================================
-// TEST DE BASE DE DONNÉES AU DÉMARRAGE
+// SEEDING & VECTOR INDEX BUILD
 // =======================================
 using (var scope = app.Services.CreateScope())
 {
-    try
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+
+    if (app.Environment.IsDevelopment())
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var productCount = await dbContext.Products.CountAsync(p => p.IsActive);
-        Console.WriteLine($"✅ Base de données connectée - Produits actifs: {productCount}");
+        var seeder = scope.ServiceProvider.GetRequiredService<DataSeederService>();
+        await seeder.SeedAsync(forceReseed: false);
 
-        var testProduct = await dbContext.Products
-            .Where(p => p.IsActive && p.StockQuantity > 0)
-            .Select(p => new { p.Id, p.Name, p.Price })
-            .FirstOrDefaultAsync();
-
-        if (testProduct != null)
+        // Construire l'index vectoriel en arrière-plan
+        var vectorIndex = scope.ServiceProvider.GetRequiredService<VectorProductIndexService>();
+        var productService = scope.ServiceProvider.GetRequiredService<IProductService>();
+        
+        _ = Task.Run(async () =>
         {
-            Console.WriteLine($"✅ Produit de test disponible: {testProduct.Name} ({testProduct.Price:C})");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"❌ Erreur base de données: {ex.Message}");
+            try
+            {
+                Console.WriteLine("🚀 Construction de l'index vectoriel en arrière-plan...");
+                var products = await productService.GetAllAsync();
+                await vectorIndex.BuildIndexAsync(products, forceRebuild: false);
+                Console.WriteLine("✅ Index vectoriel prêt!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur index vectoriel: {ex.Message}");
+            }
+        });
     }
 }
 
-// =======================================
-// MESSAGE DE DÉMARRAGE
-// =======================================
-Console.WriteLine("\n" + new string('=', 60));
-Console.WriteLine("🚀 APPLICATION DÉMARRÉE AVEC SUCCÈS");
-Console.WriteLine(new string('=', 60));
-Console.WriteLine("📋 URLs disponibles:");
-Console.WriteLine($"  • Interface principale: https://localhost:7058");
-Console.WriteLine($"  • Produits: https://localhost:7058/Products/Index");
-Console.WriteLine($"  • Panier: https://localhost:7058/Cart/Index");
-Console.WriteLine($"  • Test Cart: https://localhost:7058/TestCart");
-Console.WriteLine($"  • Test Form: https://localhost:7058/TestForm");
-Console.WriteLine($"  • Debug Routes: https://localhost:7058/debug/routes");
-Console.WriteLine($"  • Debug Cookie: https://localhost:7058/debug/cookie");
-Console.WriteLine($"  • API Test: https://localhost:7058/api/cart/add");
-Console.WriteLine("\n🛒 POUR TESTER LE PANIER:");
-Console.WriteLine($"  1. Allez sur /TestForm pour tester les formulaires");
-Console.WriteLine($"  2. Utilisez /debug/cookie pour vérifier les cookies");
-Console.WriteLine($"  3. Testez avec l'API: POST /api/cart/add");
-Console.WriteLine(new string('=', 60));
-Console.WriteLine("\n⚠️  Messages d'avertissement Identity (normaux):");
-Console.WriteLine("   - 'PreferredBrands/PreferredCategories' sans ValueComparer");
-Console.WriteLine("   - Ces warnings n'affectent pas le fonctionnement du panier");
-Console.WriteLine(new string('=', 60));
 
+// =======================================
 app.Run();
 
 // =======================================
-// CLASSES AUXILIAIRES APRÈS app.Run()
+// SUPPORT CLASSES
 // =======================================
-
-// Modèle pour la requête API
 public record CartAddRequest(Guid ProductId, int Quantity = 1);
 
-// Service email factice
 public class DummyEmailSender : IEmailSender
 {
     public Task SendEmailAsync(string email, string subject, string htmlMessage)
-    {
-        Console.WriteLine($"📧 Email simulé envoyé à {email}: {subject}");
-        return Task.CompletedTask;
-    }
+        => Task.CompletedTask;
+}
+
+// Configuration Gemini
+public class GeminiOptions
+{
+    public string ApiKey { get; set; } = string.Empty;
+    public string Model { get; set; } = "gemini-1.5-flash-latest"; // Modèle gratuit recommandé
+    public decimal Temperature { get; set; } = 0.3m;
+    public int MaxTokens { get; set; } = 1000;
+    public bool Enabled { get; set; } = true;
 }

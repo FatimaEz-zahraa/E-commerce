@@ -8,7 +8,7 @@ namespace E_commerce.Services
 {
     public interface IDataSeederService
     {
-        Task SeedAsync(int userCount = 1000, int productsPerCategory = 100, int maxReviewsPerProduct = 20);
+        Task SeedAsync(bool forceReseed = false, int userCount = 1000, int productsPerCategory = 100, int maxReviewsPerProduct = 20); 
     }
 
     public class DataSeederService : IDataSeederService
@@ -124,16 +124,38 @@ namespace E_commerce.Services
             _geminiService = geminiService;
         }
 
-        public async Task SeedAsync(int userCount = 1000, int productsPerCategory = 100, int maxReviewsPerProduct = 20)
+        public async Task SeedAsync(
+            bool forceReseed = false,
+            int userCount = 1000,
+            int productsPerCategory = 100,
+            int maxReviewsPerProduct = 20)
         {
             _logger.LogInformation("🚀 Vérification du seeding...");
+
+            if (forceReseed)
+            {
+                _logger.LogWarning("⚠️ FORCE RESEED ACTIVÉ – Nettoyage de la base");
+
+                _context.Reviews.RemoveRange(_context.Reviews);
+                _context.OrderItems.RemoveRange(_context.OrderItems);
+                _context.Orders.RemoveRange(_context.Orders);
+                _context.WishlistItems.RemoveRange(_context.WishlistItems);
+                _context.CartItems.RemoveRange(_context.CartItems);
+                _context.Carts.RemoveRange(_context.Carts);
+                _context.UserSearchHistory.RemoveRange(_context.UserSearchHistory);
+                _context.Products.RemoveRange(_context.Products);
+
+                await _context.SaveChangesAsync();
+            }
+
+          
 
             // 1️⃣ Rôles (safe)
             await SeedRolesAsync();
 
             // 2️⃣ Utilisateurs
             List<ApplicationUser> users;
-            if (!_context.Users.Any())
+            if (forceReseed || !_context.Users.Any())
             {
                 _logger.LogInformation("👤 Aucun utilisateur → seeding users");
                 users = await SeedUsersAsync(userCount);
@@ -146,7 +168,7 @@ namespace E_commerce.Services
 
             // 3️⃣ Produits
             List<Product> products;
-            if (!_context.Products.Any())
+            if (forceReseed || !_context.Products.Any())
             {
                 _logger.LogInformation("📦 Aucun produit → seeding produits");
                 products = await SeedProductsAsync(productsPerCategory);
@@ -158,7 +180,7 @@ namespace E_commerce.Services
             }
 
             // 4️⃣ Commandes
-            if (!_context.Orders.Any())
+            if (forceReseed || !_context.Orders.Any())
             {
                 _logger.LogInformation("🧾 Seeding commandes");
                 await SeedOrdersAsync(users, products);
@@ -169,25 +191,25 @@ namespace E_commerce.Services
             }
 
             // 5️⃣ Wishlists
-            if (!_context.WishlistItems.Any())
+            if (forceReseed || !_context.WishlistItems.Any())
             {
                 await SeedWishlistsAsync(users, products);
             }
 
             // 6️⃣ Reviews
-            if (!_context.Reviews.Any())
+            if (forceReseed || !_context.Reviews.Any())
             {
                 await SeedReviewsAsync(users, products, maxReviewsPerProduct);
             }
 
             // 7️⃣ Carts
-            if (!_context.Carts.Any())
+            if (forceReseed || !_context.Carts.Any())
             {
                 await SeedCartsAsync(users, products);
             }
 
             // 8️⃣ Search history
-            if (!_context.UserSearchHistory.Any())
+            if (forceReseed || !_context.UserSearchHistory.Any())
             {
                 await SeedSearchHistoryAsync(users);
             }
@@ -370,6 +392,7 @@ namespace E_commerce.Services
                         Label = "Bureau",
                         RecipientName = "Administrateur System"
                     }
+
                 };
 
                 var result = await _userManager.CreateAsync(admin, "Admin123!");
@@ -389,12 +412,6 @@ namespace E_commerce.Services
             var products = new List<Product>();
             int geminiCallCount = 0;
             const int MAX_GEMINI_CALLS = 50;
-            if (_context.Products.Any())
-            {
-                _logger.LogInformation("📦 Produits déjà seedés → arrêt");
-                return await _context.Products.ToListAsync();
-            }
-
 
             // Créer les produits par batch
             foreach (var category in _categories)
@@ -524,47 +541,81 @@ namespace E_commerce.Services
             var orders = new List<Order>();
             var usersWithOrders = users.Where(_ => _random.Next(100) < 70).ToList();
 
+            _logger.LogInformation($"🧾 Génération commandes pour {usersWithOrders.Count} utilisateurs");
+
+            int userIndex = 0;
+
             foreach (var user in usersWithOrders)
             {
-                int orderCount = _random.Next(1, 11);
+                userIndex++;
+
+                int orderCount = _random.Next(1, 6);
+
                 for (int i = 0; i < orderCount; i++)
                 {
-                    var order = await CreateOrderAsync(user, products);
+                    var order = CreateOrderInMemory(user, products);
                     orders.Add(order);
                 }
 
-                // Mettre à jour les stats utilisateur
                 user.TotalOrders = orderCount;
-                user.TotalAmountSpent = orders.Where(o => o.UserId == user.Id).Sum(o => o.TotalAmount);
+                user.TotalAmountSpent = orders
+                    .Where(o => o.UserId == user.Id)
+                    .Sum(o => o.TotalAmount);
+
                 user.LoyaltyPoints = (int)(user.TotalAmountSpent / 10);
+
+                if (userIndex % 20 == 0)
+                {
+                    _logger.LogInformation($"👤 {userIndex}/{usersWithOrders.Count} utilisateurs traités");
+                }
             }
 
-            // Sauvegarder par batch
-            var batchSize = 50;
+            _logger.LogInformation($"🧾 {orders.Count} commandes générées");
+
+            // INSERTION PAR BATCH
+            const int batchSize = 25;
+
             for (int i = 0; i < orders.Count; i += batchSize)
             {
                 var batch = orders.Skip(i).Take(batchSize).ToList();
+
+                foreach (var order in batch)
+                {
+                    order.Id = 0;
+
+                    foreach (var item in order.OrderItems)
+                    {
+                        item.Id = 0;
+                    }
+                }
+
                 await _context.Orders.AddRangeAsync(batch);
                 await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"✅ {Math.Min(i + batchSize, orders.Count)}/{orders.Count} commandes insérées");
             }
 
             return orders;
         }
 
-        private async Task<Order> CreateOrderAsync(ApplicationUser user, List<Product> products)
+
+        private Order CreateOrderInMemory(ApplicationUser user, List<Product> products)
         {
             var orderDate = DateTime.UtcNow.AddDays(-_random.Next(1, 365));
             var orderItems = new List<OrderItem>();
 
-            int itemCount = _random.Next(1, 9);
-            var selectedProducts = products.OrderBy(_ => _random.Next()).Take(itemCount).ToList();
+            var selectedProducts = products
+                .OrderBy(_ => _random.Next())
+                .Take(_random.Next(1, 6))
+                .ToList();
 
             decimal subtotal = 0;
+
             foreach (var product in selectedProducts)
             {
                 int quantity = _random.Next(1, 4);
-                decimal totalPrice = product.Price * quantity;
-                subtotal += totalPrice;
+                var total = product.Price * quantity;
+                subtotal += total;
 
                 orderItems.Add(new OrderItem
                 {
@@ -572,7 +623,7 @@ namespace E_commerce.Services
                     ProductName = product.Name,
                     UnitPrice = product.Price,
                     Quantity = quantity,
-                    TotalPrice = totalPrice,
+                    TotalPrice = total,
                     ProductCategory = product.Category,
                     ProductBrand = product.Brand,
                     ProductRating = product.Rating
@@ -581,9 +632,8 @@ namespace E_commerce.Services
 
             var shippingCost = _random.Next(0, 20);
             var tax = Math.Round(subtotal * 0.2m, 2);
-            var totalAmount = subtotal + shippingCost + tax;
 
-            var order = new Order
+            return new Order
             {
                 UserId = user.Id,
                 OrderNumber = $"ORD-{orderDate:yyyyMMdd}-{_random.Next(10000, 99999)}",
@@ -592,33 +642,33 @@ namespace E_commerce.Services
                 Subtotal = subtotal,
                 ShippingCost = shippingCost,
                 Tax = tax,
-                TotalAmount = totalAmount,
-                ShippingAddress = user.ShippingAddress ?? new Address(),
+                TotalAmount = subtotal + shippingCost + tax,
+
+                ShippingAddress = user.ShippingAddress == null
+                    ? new Address()
+                    : new Address
+                    {
+                        Street = user.ShippingAddress.Street,
+                        City = user.ShippingAddress.City,
+                        State = user.ShippingAddress.State,
+                        PostalCode = user.ShippingAddress.PostalCode,
+                        Country = user.ShippingAddress.Country,
+                        PhoneNumber = user.ShippingAddress.PhoneNumber
+                    },
+
                 PaymentMethod = GetRandomPaymentMethod(),
                 PaymentStatus = PaymentStatus.Paid,
                 ShippingMethod = GetRandomShippingMethod(),
                 TrackingNumber = _random.Next(100) < 70 ? $"TRACK{_random.Next(100000000, 999999999)}" : null,
                 ShippedDate = GetRandomShippedDate(orderDate),
                 DeliveredDate = GetRandomDeliveredDate(orderDate),
-                Notes = _random.Next(100) < 20 ? "Livraison rapide demandée" : null,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+
+                OrderItems = orderItems
             };
-
-            // Ajouter l'ordre d'abord pour avoir un ID
-            await _context.Orders.AddAsync(order);
-            await _context.SaveChangesAsync();
-
-            // Ajouter les OrderItems avec l'ID de l'ordre
-            foreach (var item in orderItems)
-            {
-                item.OrderId = order.Id;
-            }
-            await _context.OrderItems.AddRangeAsync(orderItems);
-            await _context.SaveChangesAsync();
-
-            return order;
         }
+
 
         private async Task<List<WishlistItem>> SeedWishlistsAsync(List<ApplicationUser> users, List<Product> products)
         {

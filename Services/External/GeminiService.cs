@@ -17,7 +17,7 @@ namespace E_commerce.Services.External
         public GeminiService(IConfiguration configuration, ILogger<GeminiService> logger)
         {
             _httpClient = new HttpClient();
-            _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
+            _apiKey = configuration["GeminiAPI:ApiKey"] ?? string.Empty;
             _logger = logger;
 
             // Configure les headers par défaut

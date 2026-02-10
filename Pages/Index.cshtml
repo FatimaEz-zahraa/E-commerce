@@ -1,10 +1,688 @@
 ﻿@page
-@model IndexModel
+@using E_commerce.Pages.Shared
+@model IndexPageModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Accueil - E-Shop Premium";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!-- Hero Section Professionnelle -->
+<section class="hero-section position-relative overflow-hidden mb-6">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-3 text-gradient-primary">
+                    Bienvenue sur <span class="text-primary">E-Shop</span>
+                </h1>
+                <p class="lead text-muted mb-4">
+                    Découvrez une expérience shopping premium avec notre assistant IA intelligent.
+                    Des produits soigneusement sélectionnés pour votre style de vie.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="/Products/Index" class="btn btn-primary btn-lg px-4 py-3">
+                        <i class="fas fa-shopping-bag me-2"></i>
+                        Explorer la boutique
+                    </a>
+                    <button class="btn btn-outline-primary btn-lg px-4 py-3"
+                            onclick="document.getElementById('aiAssistantTrigger').click()">
+                        <i class="fas fa-robot me-2"></i>
+                        Assistant Shopping
+                    </button>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-image-container">
+                    <img src="/images/hero-banner.png" alt="E-commerce premium"
+                         class="img-fluid rounded-3 shadow-lg"
+                         onerror="this.src='/images/placeholder.jpg'">
+                    <div class="hero-overlay"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="hero-wave">
+        <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+        </svg>
+    </div>
+</section>
+
+<!-- Caractéristiques Premium -->
+<section class="features-section mb-6">
+    <div class="container">
+        <h2 class="text-center mb-5">
+            <span class="section-title">Pourquoi nous choisir</span>
+        </h2>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="feature-card text-center p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h5 class="mt-3 mb-2">Assistant IA</h5>
+                    <p class="text-muted small mb-0">Conseils personnalisés par intelligence artificielle avancée</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-card text-center p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-shipping-fast"></i>
+                    </div>
+                    <h5 class="mt-3 mb-2">Livraison Express</h5>
+                    <p class="text-muted small mb-0">Livraison gratuite et rapide dès 50€ d'achat</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-card text-center p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h5 class="mt-3 mb-2">Paiement Sécurisé</h5>
+                    <p class="text-muted small mb-0">Transactions 100% sécurisées et cryptées</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-card text-center p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h5 class="mt-3 mb-2">Support Premium</h5>
+                    <p class="text-muted small mb-0">Service client dédié 24/7</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Catégories Premium -->
+<section class="categories-section mb-6">
+    <div class="container">
+        <h2 class="mb-5">
+            <span class="section-title">Catégories Premium</span>
+        </h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <a href="/Products/Index?category=Électronique" class="category-card-link">
+                    <div class="category-card category-electronique">
+                        <div class="category-content">
+                            <div class="category-icon">
+                                <i class="fas fa-laptop"></i>
+                            </div>
+                            <h3 class="category-title">Électronique</h3>
+                            <p class="category-description">Découvrez les dernières innovations technologiques</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="/Products/Index?category=Téléphonie" class="category-card-link">
+                    <div class="category-card category-telephonie">
+                        <div class="category-content">
+                            <div class="category-icon">
+                                <i class="fas fa-mobile-alt"></i>
+                            </div>
+                            <h3 class="category-title">Téléphonie</h3>
+                            <p class="category-description">Smartphones et accessoires haute technologie</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="/Products/Index?category=Informatique" class="category-card-link">
+                    <div class="category-card category-informatique">
+                        <div class="category-content">
+                            <div class="category-icon">
+                                <i class="fas fa-desktop"></i>
+                            </div>
+                            <h3 class="category-title">Informatique</h3>
+                            <p class="category-description">Ordinateurs et équipements professionnels</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Produits Tendances -->
+<section class="trending-section mb-6">
+    <div class="container">
+        <h2 class="mb-5">
+            <span class="section-title">Produits Tendances</span>
+            <a href="/Products/Index" class="btn btn-link float-end">Voir tout →</a>
+        </h2>
+        <div class="row g-4" id="trendingProducts">
+            <!-- Les produits tendances seront chargés dynamiquement -->
+            <div class="col-12 text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter -->
+<section class="newsletter-section mb-6">
+    <div class="container">
+        <div class="newsletter-card p-5 rounded-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h3 class="mb-3">Restez informé</h3>
+                    <p class="text-muted mb-0">
+                        Abonnez-vous à notre newsletter pour recevoir nos offres exclusives
+                        et les dernières nouveautés.
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <form class="newsletter-form">
+                        <div class="input-group">
+                            <input type="email" class="form-control form-control-lg"
+                                   placeholder="Votre adresse email" required>
+                            <button class="btn btn-primary btn-lg" type="submit">
+                                S'abonner
+                            </button>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            En vous abonnant, vous acceptez notre politique de confidentialité.
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Variables de thème améliorées */
+    :root {
+        --primary-color: #6366f1;
+        --primary-light: #818cf8;
+        --primary-dark: #4f46e5;
+        --secondary-color: #ec4899;
+        --accent-color: #f59e0b;
+        --light-color: #f8fafc;
+        --dark-color: #1e293b;
+        --gray-light: #e2e8f0;
+        --gray-medium: #94a3b8;
+        --shadow-light: 0 4px 20px rgba(0,0,0,0.05);
+        --shadow-medium: 0 8px 30px rgba(0,0,0,0.1);
+        --shadow-heavy: 0 20px 60px rgba(0,0,0,0.15);
+        --gradient-primary: linear-gradient(135deg, #6366f1, #8b5cf6);
+        --gradient-secondary: linear-gradient(135deg, #ec4899, #f472b6);
+        --gradient-accent: linear-gradient(135deg, #f59e0b, #fbbf24);
+    }
+
+    /* Hero Section */
+    .hero-section {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 0 0 40px 40px;
+        margin-bottom: 4rem;
+    }
+
+    .text-gradient-primary {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .hero-image-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 20px;
+    }
+
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+        border-radius: 20px;
+    }
+
+    .hero-wave {
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        overflow: hidden;
+        line-height: 0;
+    }
+
+    .hero-wave svg {
+        position: relative;
+        display: block;
+        width: calc(100% + 1.3px);
+        height: 120px;
+        transform: rotateY(180deg);
+    }
+
+    .hero-wave path {
+        fill: #ffffff;
+    }
+
+    /* Section Titles */
+    .section-title {
+        position: relative;
+        padding-bottom: 10px;
+        font-weight: 700;
+    }
+
+    .section-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: 2px;
+    }
+
+    /* Feature Cards */
+    .feature-card {
+        background: white;
+        border-radius: 16px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid var(--gray-light);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-card:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+        transition: height 0.3s;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-heavy);
+        border-color: var(--primary-light);
+    }
+
+    .feature-card:hover:before {
+        height: 6px;
+    }
+
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        margin: 0 auto;
+        background: var(--gradient-primary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+
+    .feature-icon i {
+        font-size: 28px;
+        color: white;
+    }
+
+    .feature-card:hover .feature-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    /* Category Cards */
+    .category-card-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+    }
+
+    .category-card {
+        height: 280px;
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .category-card:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
+        z-index: 1;
+    }
+
+    .category-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 30px;
+        z-index: 2;
+        color: white;
+        transform: translateY(20px);
+        transition: transform 0.5s;
+    }
+
+    .category-card:hover .category-content {
+        transform: translateY(0);
+    }
+
+    .category-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.9;
+    }
+
+    .category-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .category-description {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.5s 0.1s;
+        font-size: 14px;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .category-card:hover .category-description {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .category-electronique {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .category-telephonie {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .category-informatique {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .category-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+    }
+
+    /* Newsletter */
+    .newsletter-card {
+        background: var(--gradient-primary);
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .newsletter-card:before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+        background-size: 20px 20px;
+        opacity: 0.3;
+        animation: float 20s linear infinite;
+    }
+
+    .newsletter-form .form-control {
+        border: none;
+        border-radius: 12px 0 0 12px;
+        padding-left: 20px;
+    }
+
+    .newsletter-form .btn {
+        border-radius: 0 12px 12px 0;
+        border: none;
+        background: var(--dark-color);
+        color: white;
+    }
+
+    .newsletter-form .btn:hover {
+        background: #334155;
+    }
+
+    /* Animations */
+    @@keyframes float {
+        from {
+            transform: translateY(0) rotate(0);
+        }
+        to {
+            transform: translateY(-20px) rotate(360deg);
+        }
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .hero-section {
+            border-radius: 0 0 20px 20px;
+        }
+
+        .category-card {
+            height: 220px;
+        }
+
+        .category-title {
+            font-size: 22px;
+        }
+
+        .newsletter-card {
+            padding: 30px 20px !important;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Charger les produits tendances
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTrendingProducts();
+
+            // Animation au scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-in');
+                    }
+                });
+            }, observerOptions);
+
+            // Observer les éléments
+            document.querySelectorAll('.feature-card, .category-card').forEach(el => {
+                observer.observe(el);
+            });
+
+            // Gestion newsletter
+            document.querySelector('.newsletter-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const email = this.querySelector('input[type="email"]').value;
+
+                // Simuler l'envoi
+                const btn = this.querySelector('button');
+                const originalText = btn.innerHTML;
+
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Inscription...';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-check me-2"></i>Inscrit !';
+                    btn.className = 'btn btn-success btn-lg';
+
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.className = 'btn btn-primary btn-lg';
+                        btn.disabled = false;
+                        this.reset();
+                    }, 2000);
+                }, 1500);
+            });
+        });
+
+        async function loadTrendingProducts() {
+            try {
+                const response = await fetch('/api/products/trending?limit=6');
+                const products = await response.json();
+
+                const container = document.getElementById('trendingProducts');
+                container.innerHTML = '';
+
+                products.forEach(product => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-sm-6';
+
+                    col.innerHTML = `
+                        <div class="product-card-trending">
+                            <div class="product-image">
+                                <img src="${product.imageUrl || '/images/placeholder.jpg'}"
+                                     alt="${product.name}"
+                                     onerror="this.src='/images/placeholder.jpg'">
+                                ${product.discountPercentage > 0 ?
+                                    `<div class="discount-badge">-${product.discountPercentage}%</div>` : ''}
+                            </div>
+                            <div class="product-info">
+                                <h6 class="product-title">${product.name}</h6>
+                                <div class="product-price">
+                                    <span class="current-price">${product.price.toFixed(2)} €</span>
+                                    ${product.oldPrice ?
+                                        `<span class="old-price">${product.oldPrice.toFixed(2)} €</span>` : ''}
+                                </div>
+                                <a href="/Products/Details/${product.id}" class="btn btn-sm btn-outline-primary">
+                                    Voir le produit
+                                </a>
+                            </div>
+                        </div>
+                    `;
+
+                    container.appendChild(col);
+                });
+
+            } catch (error) {
+                console.error('Erreur chargement produits:', error);
+                document.getElementById('trendingProducts').innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x text-muted mb-3"></i>
+                        <p class="text-muted">Impossible de charger les produits tendances</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Style pour les produits tendances
+        const style = document.createElement('style');
+        style.textContent = `
+            .product-card-trending {
+                background: white;
+                border-radius: 16px;
+                overflow: hidden;
+                border: 1px solid var(--gray-light);
+                transition: all 0.3s;
+                height: 100%;
+            }
+
+            .product-card-trending:hover {
+                transform: translateY(-5px);
+                box-shadow: var(--shadow-medium);
+                border-color: var(--primary-light);
+            }
+
+            .product-card-trending .product-image {
+                position: relative;
+                height: 200px;
+                overflow: hidden;
+            }
+
+            .product-card-trending .product-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform 0.5s;
+            }
+
+            .product-card-trending:hover .product-image img {
+                transform: scale(1.05);
+            }
+
+            .discount-badge {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: var(--gradient-secondary);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .product-card-trending .product-info {
+                padding: 20px;
+            }
+
+            .product-card-trending .product-title {
+                font-weight: 600;
+                margin-bottom: 10px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                height: 2.8em;
+            }
+
+            .product-card-trending .product-price {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            .product-card-trending .current-price {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--primary-color);
+            }
+
+            .product-card-trending .old-price {
+                font-size: 14px;
+                color: var(--gray-medium);
+                text-decoration: line-through;
+            }
+
+            .animate-in {
+                animation: fadeInUp 0.6s ease-out;
+            }
+
+            @@keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+}

@@ -1,20 +1,26 @@
+// Pages/Index.cshtml.cs
+using E_commerce.Pages.Shared;
+using E_commerce.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace E_commerce.Pages
 {
-    public class IndexModel : PageModel
+    public class IndexPageModel : RagPageModel
     {
-        private readonly ILogger<IndexModel> _logger;
-
-        public IndexModel(ILogger<IndexModel> logger)
+        public IndexPageModel(
+            IRagService ragService,
+            IProductService productService,
+            ILogger<IndexPageModel> logger)
+            : base(ragService, productService, logger)
         {
-            _logger = logger;
         }
 
         public void OnGet()
         {
-
+            // Page d'accueil - pas de logique spéciale nécessaire
         }
+
+        // Les méthodes OnPostAskAssistantAsync et OnGetSuggestions 
+        // sont héritées de RagPageModel
     }
 }

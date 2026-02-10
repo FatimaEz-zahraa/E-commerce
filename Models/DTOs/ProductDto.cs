@@ -13,8 +13,9 @@ public class ProductDto
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
 
-    // Propriétés calculées ou supplémentaires
+    // Propriétés calculées 
     public int ReviewCount { get; set; }
     public decimal? OldPrice { get; set; } // Pour les promotions
     public int? DiscountPercentage { get; set; } // Pourcentage de réduction
 }
+
